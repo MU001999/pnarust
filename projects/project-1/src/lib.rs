@@ -1,5 +1,5 @@
-use std::panic;
 use std::iter::Map;
+use std::panic;
 
 pub struct KvStore {
     data: Map<String, String>,

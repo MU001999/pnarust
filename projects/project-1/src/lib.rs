@@ -2,7 +2,7 @@ use std::iter::Map;
 use std::panic;
 
 pub struct KvStore {
-    data: Map<String, String>,
+    _data: Map<String, String>,
 }
 
 impl KvStore {
@@ -10,15 +10,15 @@ impl KvStore {
         panic!();
     }
 
-    pub fn set(&mut self, key: String, value: String) {
+    pub fn set(&mut self, _key: String, _value: String) {
         panic!();
     }
 
-    pub fn get(&self, key: String) -> Option<String> {
+    pub fn get(&self, _key: String) -> Option<String> {
         panic!();
     }
 
-    pub fn remove(&mut self, key: String) {
+    pub fn remove(&mut self, _key: String) {
         panic!();
     }
 }

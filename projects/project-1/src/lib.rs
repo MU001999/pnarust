@@ -1,24 +1,29 @@
-use std::iter::Map;
-use std::panic;
+use std::collections::HashMap;
 
 pub struct KvStore {
-    _data: Map<String, String>,
+    data: HashMap<String, String>,
 }
 
 impl KvStore {
     pub fn new() -> KvStore {
-        panic!();
+        KvStore {
+            data: HashMap::new(),
+        }
     }
 
-    pub fn set(&mut self, _key: String, _value: String) {
-        panic!();
+    pub fn set(&mut self, key: String, value: String) {
+        self.data.insert(key, value);
     }
 
-    pub fn get(&self, _key: String) -> Option<String> {
-        panic!();
+    pub fn get(&self, key: String) -> Option<String> {
+        let value = self.data.get(&key);
+        match value {
+            None => None,
+            Some(value) => Some(value.clone())
+        }
     }
 
-    pub fn remove(&mut self, _key: String) {
-        panic!();
+    pub fn remove(&mut self, key: String) {
+        self.data.remove(&key);
     }
 }

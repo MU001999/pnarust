@@ -19,7 +19,7 @@ impl KvStore {
         let value = self.data.get(&key);
         match value {
             None => None,
-            Some(value) => Some(value.clone())
+            Some(value) => Some(value.clone()),
         }
     }
 

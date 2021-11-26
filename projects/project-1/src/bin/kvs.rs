@@ -41,13 +41,10 @@ fn main() {
         )
         .get_matches();
 
-    if let Some(_matches) = matches.subcommand_matches("set") {
-        eprintln!("unimplemented");
-        exit(1);
-    } else if let Some(_matches) = matches.subcommand_matches("get") {
-        eprintln!("unimplemented");
-        exit(1);
-    } else if let Some(_matches) = matches.subcommand_matches("rm") {
+    if matches.subcommand_matches("set").is_some()
+        || matches.subcommand_matches("get").is_some()
+        || matches.subcommand_matches("rm").is_some()
+    {
         eprintln!("unimplemented");
         exit(1);
     }

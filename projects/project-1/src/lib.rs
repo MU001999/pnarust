@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 
 /// The mainly struct
+#[derive(Default)]
 pub struct KvStore {
     data: HashMap<String, String>,
 }
@@ -42,11 +43,7 @@ impl KvStore {
     /// assert_eq!(store.get("k".to_owned()), Some("v".to_owned()));
     /// ```
     pub fn get(&self, key: String) -> Option<String> {
-        let value = self.data.get(&key);
-        match value {
-            None => None,
-            Some(value) => Some(value.clone()),
-        }
+        self.data.get(&key).cloned()
     }
 
     /// Remove the given key and the corresponding value.

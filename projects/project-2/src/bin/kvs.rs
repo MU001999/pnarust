@@ -1,6 +1,5 @@
-use std::process::exit;
 use structopt::StructOpt;
-use kvs::Result;
+use kvs::{KvStore, Result};
 
 #[derive(StructOpt)]
 #[structopt(name = env!("CARGO_PKG_NAME"),
@@ -17,36 +16,43 @@ struct Config {
 enum SubCommand {
     Set {
         #[structopt(value_name = "KEY")]
-        _key: String,
+        key: String,
         #[structopt(value_name = "VALUE")]
-        _value: String,
+        value: String,
     },
     Get {
         #[structopt(value_name = "KEY")]
-        _key: String,
+        key: String,
     },
     Rm {
         #[structopt(value_name = "KEY")]
-        _key: String,
+        key: String,
     },
 }
 
 fn main() -> Result<()> {
     let config = Config::from_args();
 
+    let mut kvstore = KvStore::open("kvs.data")?;
+
     if let Some(cmd) = config.sub_cmd {
         match cmd {
-            SubCommand::Set { .. } => {
-                eprintln!("unimplemented");
-                exit(1);
+            SubCommand::Set { key, value } => {
+                kvstore.set(key, value)?;
+                return Ok(());
             },
-            SubCommand::Get { .. } => {
-                eprintln!("unimplemented");
-                exit(1);
+            SubCommand::Get { key} => {
+                let result = kvstore.get(key)?;
+                if let Some(value) = result {
+                    println!("{}", value);
+                } else {
+                    println!("Key not found");
+                }
+                return Ok(());
             },
-            SubCommand::Rm { .. } => {
-                eprintln!("unimplemented");
-                exit(1);
+            SubCommand::Rm { key } => {
+                kvstore.remove(key)?;
+                return Ok(());
             },
         }
     }

@@ -2,7 +2,10 @@
 //!
 //! `kvs` is a key-value store
 
-use std::collections::HashMap;
+use core::panic;
+use std::{collections::HashMap, path::PathBuf};
+
+pub type Result<T> = core::result::Result<T, String>;
 
 /// The mainly struct
 #[derive(Default)]
@@ -27,8 +30,9 @@ impl KvStore {
     /// store.set("k".to_owned(), "v".to_owned());
     /// assert_eq!(store.get("k".to_owned()), Some("v".to_owned()));
     /// ```
-    pub fn set(&mut self, key: String, value: String) {
+    pub fn set(&mut self, key: String, value: String) -> Result<()> {
         self.data.insert(key, value);
+        Ok(())
     }
 
     /// Get the corresponding value of the given key,
@@ -42,8 +46,8 @@ impl KvStore {
     /// store.set("k".to_owned(), "v".to_owned());
     /// assert_eq!(store.get("k".to_owned()), Some("v".to_owned()));
     /// ```
-    pub fn get(&self, key: String) -> Option<String> {
-        self.data.get(&key).cloned()
+    pub fn get(&self, key: String) -> Result<Option<String>> {
+        Ok(self.data.get(&key).cloned())
     }
 
     /// Remove the given key and the corresponding value.
@@ -57,7 +61,12 @@ impl KvStore {
     /// store.remove("k".to_owned());
     /// assert_eq!(store.get("k".to_owned()), None);
     /// ```
-    pub fn remove(&mut self, key: String) {
+    pub fn remove(&mut self, key: String) -> Result<()> {
         self.data.remove(&key);
+        Ok(())
+    }
+
+    pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
+        panic!("unimplemented!")
     }
 }

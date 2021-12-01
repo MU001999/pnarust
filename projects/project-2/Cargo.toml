@@ -12,4 +12,5 @@ tempfile = "3.0.7"
 walkdir = "2.2.7"
 
 [dependencies]
+failure = "0.1.8"
 structopt = "0.3.25"

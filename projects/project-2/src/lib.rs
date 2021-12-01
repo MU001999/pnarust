@@ -5,7 +5,7 @@
 use core::panic;
 use std::{collections::HashMap, path::PathBuf};
 
-pub type Result<T> = core::result::Result<T, String>;
+pub type Result<T> = core::result::Result<T, failure::Error>;
 
 /// The mainly struct
 #[derive(Default)]

@@ -14,13 +14,6 @@ pub struct KvStore {
 }
 
 impl KvStore {
-    /// New a KvStore
-    pub fn new() -> KvStore {
-        KvStore {
-            data: HashMap::new(),
-        }
-    }
-
     /// Set the given value with the given key.
     ///
     /// # Examples

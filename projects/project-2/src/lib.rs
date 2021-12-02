@@ -123,7 +123,6 @@ impl KvStore {
         let stream = serde_json::Deserializer::from_reader(&mut reader).into_iter();
         for command in stream {
             let command = command?;
-            //let command = serde_json::from_reader(line.as_bytes())?;
             match command {
                 Command::Set { key, value } => {
                     data.insert(key.clone(), value.clone());

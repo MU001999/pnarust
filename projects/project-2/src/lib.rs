@@ -26,7 +26,7 @@ pub enum Command {
 pub struct KvStore {
     index: HashMap<String, (u64, u64)>,
     path: PathBuf,
-    nfile: u64,
+    active_nth_file: u64,
 }
 
 impl KvStore {
@@ -35,7 +35,7 @@ impl KvStore {
     }
 
     fn active_path(&self) -> PathBuf {
-        self.path_at(self.nfile - 1)
+        self.path_at(self.active_nth_file)
     }
 }
 
@@ -72,7 +72,7 @@ impl KvStore {
         )?;
         writer.write_all("#".as_bytes())?;
 
-        self.index.insert(key, (self.nfile - 1, pos));
+        self.index.insert(key, (self.active_nth_file, pos));
 
         Ok(())
     }
@@ -156,28 +156,23 @@ impl KvStore {
 
         // rebuild the in-memory index
         let mut index = HashMap::new();
-        let mut nfile: u64 = 0;
 
         if !path_at(0).exists() {
             File::create(path_at(0))?;
-            return Ok(KvStore { index, path, nfile: 1 });
+            return Ok(KvStore { index, path, active_nth_file: 0 });
         }
 
+        let mut nfile: u64 = 0;
         for entry in WalkDir::new(&path).min_depth(1).max_depth(1) {
             if entry?.file_name().to_string_lossy().starts_with("kvs.data.") {
                 nfile += 1;
             }
         }
+        let mut active_nth_file = nfile - 1;
 
         let mut all_record_cnt = 0;
         for i in 0..nfile {
-            let path = path_at(i);
-
-            let file = OpenOptions::new()
-                .read(true)
-                .append(true)
-                .create(true)
-                .open(path)?;
+            let file = File::open(path_at(i))?;
             let reader = BufReader::new(&file);
 
             let mut record_cnt = 0;
@@ -209,11 +204,10 @@ impl KvStore {
                     // rewrite old records to the nth file
                 }
 
-                nfile += 1;
-                break;
+                active_nth_file = nfile;
             }
         }
 
-        Ok(KvStore { index, path, nfile })
+        Ok(KvStore { index, path, active_nth_file })
     }
 }

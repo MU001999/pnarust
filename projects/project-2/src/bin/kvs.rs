@@ -1,5 +1,7 @@
+use std::process::exit;
+
 use structopt::StructOpt;
-use kvs::{KvStore, Result};
+use kvs::{KvStore, Result, Command};
 
 #[derive(StructOpt)]
 #[structopt(name = env!("CARGO_PKG_NAME"),
@@ -9,50 +11,36 @@ use kvs::{KvStore, Result};
 )]
 struct Config {
     #[structopt(subcommand)]
-    sub_cmd: Option<SubCommand>,
-}
-
-#[derive(StructOpt)]
-enum SubCommand {
-    Set {
-        #[structopt(value_name = "KEY")]
-        key: String,
-        #[structopt(value_name = "VALUE")]
-        value: String,
-    },
-    Get {
-        #[structopt(value_name = "KEY")]
-        key: String,
-    },
-    Rm {
-        #[structopt(value_name = "KEY")]
-        key: String,
-    },
+    cmd: Option<Command>,
 }
 
 fn main() -> Result<()> {
     let config = Config::from_args();
 
-    let mut kvstore = KvStore::open("kvs.data")?;
+    if let Some(cmd) = config.cmd {
+        let mut kvstore = KvStore::open(".")?;
 
-    if let Some(cmd) = config.sub_cmd {
         match cmd {
-            SubCommand::Set { key, value } => {
+            Command::Set { key, value } => {
                 kvstore.set(key, value)?;
                 return Ok(());
             },
-            SubCommand::Get { key} => {
-                let result = kvstore.get(key)?;
-                if let Some(value) = result {
+            Command::Get { key} => {
+                if let Some(value) = kvstore.get(key)? {
                     println!("{}", value);
                 } else {
                     println!("Key not found");
                 }
                 return Ok(());
             },
-            SubCommand::Rm { key } => {
-                kvstore.remove(key)?;
-                return Ok(());
+            Command::Rm { key } => {
+                if kvstore.get(key.clone())?.is_some() {
+                    kvstore.remove(key)?;
+                    return Ok(());
+                } else {
+                    println!("Key not found");
+                    exit(1);
+                }
             },
         }
     }

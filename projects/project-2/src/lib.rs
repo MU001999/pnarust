@@ -2,7 +2,6 @@
 //!
 //! `kvs` is a key-value store
 
-use walkdir::WalkDir;
 use failure::format_err;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -12,6 +11,7 @@ use std::{
     path::PathBuf,
 };
 use structopt::StructOpt;
+use walkdir::WalkDir;
 
 pub type Result<T> = core::result::Result<T, failure::Error>;
 
@@ -58,7 +58,9 @@ impl KvStore {
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
         let file = OpenOptions::new()
-            .append(true).create(true).open(self.active_path())?;
+            .append(true)
+            .create(true)
+            .open(self.active_path())?;
         let mut writer = BufWriter::new(file);
         writer.seek(SeekFrom::End(0))?;
 
@@ -135,7 +137,10 @@ impl KvStore {
     /// ```
     pub fn remove(&mut self, key: String) -> Result<()> {
         if self.index.contains_key(&key) {
-            let file = OpenOptions::new().append(true).create(true).open(self.active_path())?;
+            let file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(self.active_path())?;
             let mut writer = BufWriter::new(file);
             writer.seek(SeekFrom::End(0))?;
 
@@ -158,13 +163,20 @@ impl KvStore {
         let mut index = HashMap::new();
 
         if !path_at(0).exists() {
-            File::create(path_at(0))?;
-            return Ok(KvStore { index, path, active_nth_file: 0 });
+            return Ok(KvStore {
+                index,
+                path,
+                active_nth_file: 0,
+            });
         }
 
         let mut nfile: u64 = 0;
         for entry in WalkDir::new(&path).min_depth(1).max_depth(1) {
-            if entry?.file_name().to_string_lossy().starts_with("kvs.data.") {
+            if entry?
+                .file_name()
+                .to_string_lossy()
+                .starts_with("kvs.data.")
+            {
                 nfile += 1;
             }
         }
@@ -208,6 +220,10 @@ impl KvStore {
             }
         }
 
-        Ok(KvStore { index, path, active_nth_file })
+        Ok(KvStore {
+            index,
+            path,
+            active_nth_file,
+        })
     }
 }

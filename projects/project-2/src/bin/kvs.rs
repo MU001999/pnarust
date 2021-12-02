@@ -34,13 +34,11 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             Command::Rm { key } => {
-                if kvstore.get(key.clone())?.is_some() {
-                    kvstore.remove(key)?;
-                    return Ok(());
-                } else {
-                    println!("Key not found");
+                if let Err(err) = kvstore.remove(key) {
+                    println!("{}", err);
                     exit(1);
                 }
+                return Ok(());
             }
         }
     }

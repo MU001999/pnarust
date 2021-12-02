@@ -2,6 +2,7 @@
 //!
 //! `kvs` is a key-value store
 
+use failure::format_err;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -97,9 +98,13 @@ impl KvStore {
     /// # }
     /// ```
     pub fn remove(&mut self, key: String) -> Result<()> {
-        serde_json::to_writer(&mut self.file, &Command::Rm { key: key.clone() })?;
-        self.data.remove(&key);
-        Ok(())
+        if self.data.contains_key(&key) {
+            serde_json::to_writer(&mut self.file, &Command::Rm { key: key.clone() })?;
+            self.data.remove(&key);
+            Ok(())
+        } else {
+            Err(format_err!("Key not found"))
+        }
     }
 
     pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {

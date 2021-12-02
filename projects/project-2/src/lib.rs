@@ -4,12 +4,7 @@
 
 use failure::format_err;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fs::{File, OpenOptions},
-    io::BufReader,
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs::{File, OpenOptions}, io::{BufReader, Seek, SeekFrom}, path::PathBuf};
 use structopt::StructOpt;
 
 pub type Result<T> = core::result::Result<T, failure::Error>;
@@ -23,7 +18,7 @@ pub enum Command {
 
 /// The mainly struct
 pub struct KvStore {
-    data: HashMap<String, String>,
+    index: HashMap<String, u64>,
     file: File,
 }
 
@@ -46,6 +41,7 @@ impl KvStore {
 
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
+        let pos = self.file.stream_position()?;
         serde_json::to_writer(
             &mut self.file,
             &Command::Set {
@@ -53,7 +49,7 @@ impl KvStore {
                 value: value.clone(),
             },
         )?;
-        self.data.insert(key, value);
+        self.index.insert(key, pos);
         Ok(())
     }
 
@@ -75,8 +71,17 @@ impl KvStore {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn get(&self, key: String) -> Result<Option<String>> {
-        Ok(self.data.get(&key).cloned())
+    pub fn get(&mut self, key: String) -> Result<Option<String>> {
+        if let Some(pos) = self.index.get(&key) {
+            self.file.seek(SeekFrom::Start(*pos))?;
+            let command: Command = serde_json::from_reader(&self.file)?;
+            match command {
+                Command::Set { key: _ , value } => Ok(Some(value)),
+                _ => Err(format_err!("Err Log!!!")),
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     /// Remove the given key and the corresponding value.
@@ -98,9 +103,9 @@ impl KvStore {
     /// # }
     /// ```
     pub fn remove(&mut self, key: String) -> Result<()> {
-        if self.data.contains_key(&key) {
+        if self.index.contains_key(&key) {
             serde_json::to_writer(&mut self.file, &Command::Rm { key: key.clone() })?;
-            self.data.remove(&key);
+            self.index.remove(&key);
             Ok(())
         } else {
             Err(format_err!("Key not found"))
@@ -108,7 +113,7 @@ impl KvStore {
     }
 
     pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
-        let path: PathBuf = path.into().join("kvs.data");
+        let path: PathBuf = path.into().join("kvs.index");
 
         let file = OpenOptions::new()
             .read(true)
@@ -118,22 +123,24 @@ impl KvStore {
         let mut reader = BufReader::new(&file);
 
         // rebuild the in-memory map
-        let mut data = HashMap::new();
+        let mut index = HashMap::new();
 
         let stream = serde_json::Deserializer::from_reader(&mut reader).into_iter();
+
+        let pos = file.stream_position()?;
         for command in stream {
             let command = command?;
             match command {
-                Command::Set { key, value } => {
-                    data.insert(key.clone(), value.clone());
+                Command::Set { key, .. } => {
+                    index.insert(key.clone(), pos);
                 }
                 Command::Rm { key } => {
-                    data.remove(&key);
+                    index.remove(&key);
                 }
                 _ => continue,
             }
         }
 
-        Ok(KvStore { data, file })
+        Ok(KvStore { index, file })
     }
 }

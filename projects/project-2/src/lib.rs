@@ -4,7 +4,7 @@
 
 use failure::format_err;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs::{File, OpenOptions}, io::{BufReader, Seek, SeekFrom}, path::PathBuf};
+use std::{collections::HashMap, fs::{File, OpenOptions}, io::{BufReader, Seek, SeekFrom, BufWriter, Write, BufRead}, path::PathBuf};
 use structopt::StructOpt;
 
 pub type Result<T> = core::result::Result<T, failure::Error>;
@@ -41,14 +41,18 @@ impl KvStore {
 
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        let pos = self.file.stream_position()?;
+        let mut writer = BufWriter::new(&mut self.file);
+
+        let pos = writer.stream_position()?;
         serde_json::to_writer(
-            &mut self.file,
+            &mut writer,
             &Command::Set {
                 key: key.clone(),
                 value: value.clone(),
             },
         )?;
+        writer.write("#".as_bytes())?;
+
         self.index.insert(key, pos);
         Ok(())
     }
@@ -72,10 +76,16 @@ impl KvStore {
     /// # }
     /// ```
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
+        let mut reader = BufReader::new(&self.file);
+
         if let Some(pos) = self.index.get(&key) {
-            self.file.seek(SeekFrom::Start(*pos))?;
-            let command: Command = serde_json::from_reader(&self.file)?;
-            match command {
+            reader.seek(SeekFrom::Start(*pos))?;
+
+            let mut command = Vec::new();
+            reader.read_until(b'#', &mut command)?;
+            command.pop();
+
+            match serde_json::from_slice(&command)? {
                 Command::Set { key: _ , value } => Ok(Some(value)),
                 _ => Err(format_err!("Err Log!!!")),
             }
@@ -105,6 +115,8 @@ impl KvStore {
     pub fn remove(&mut self, key: String) -> Result<()> {
         if self.index.contains_key(&key) {
             serde_json::to_writer(&mut self.file, &Command::Rm { key: key.clone() })?;
+            self.file.write("#".as_bytes())?;
+
             self.index.remove(&key);
             Ok(())
         } else {
@@ -113,23 +125,24 @@ impl KvStore {
     }
 
     pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
-        let path: PathBuf = path.into().join("kvs.index");
+        let path: PathBuf = path.into().join("kvs.data");
 
         let file = OpenOptions::new()
             .read(true)
             .append(true)
             .create(true)
             .open(path)?;
-        let mut reader = BufReader::new(&file);
+        let reader = BufReader::new(&file);
 
-        // rebuild the in-memory map
+        // rebuild the in-memory index
         let mut index = HashMap::new();
 
-        let stream = serde_json::Deserializer::from_reader(&mut reader).into_iter();
-
-        let pos = file.stream_position()?;
-        for command in stream {
+        let mut pos: u64 = 0;
+        for command in reader.split(b'#') {
             let command = command?;
+            let next_pos = pos + command.len() as u64 + 1;
+
+            let command = serde_json::from_slice(&command)?;
             match command {
                 Command::Set { key, .. } => {
                     index.insert(key.clone(), pos);
@@ -137,8 +150,10 @@ impl KvStore {
                 Command::Rm { key } => {
                     index.remove(&key);
                 }
-                _ => continue,
+                _ => (),
             }
+
+            pos = next_pos;
         }
 
         Ok(KvStore { index, file })

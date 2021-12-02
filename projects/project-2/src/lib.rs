@@ -48,10 +48,10 @@ impl KvStore {
             &mut writer,
             &Command::Set {
                 key: key.clone(),
-                value: value.clone(),
+                value,
             },
         )?;
-        writer.write("#".as_bytes())?;
+        writer.write_all("#".as_bytes())?;
 
         self.index.insert(key, pos);
         Ok(())
@@ -115,7 +115,7 @@ impl KvStore {
     pub fn remove(&mut self, key: String) -> Result<()> {
         if self.index.contains_key(&key) {
             serde_json::to_writer(&mut self.file, &Command::Rm { key: key.clone() })?;
-            self.file.write("#".as_bytes())?;
+            self.file.write_all("#".as_bytes())?;
 
             self.index.remove(&key);
             Ok(())

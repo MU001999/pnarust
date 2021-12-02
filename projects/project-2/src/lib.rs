@@ -2,25 +2,22 @@
 //!
 //! `kvs` is a key-value store
 
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    fs::{File, OpenOptions},
+    io::BufReader,
+    path::PathBuf,
+};
 use structopt::StructOpt;
-use std::{collections::HashMap, fs::{File, OpenOptions}, io::BufReader, path::PathBuf};
-use serde::{Serialize, Deserialize};
 
 pub type Result<T> = core::result::Result<T, failure::Error>;
 
-#[derive(StructOpt)]
-#[derive(Serialize, Deserialize)]
+#[derive(StructOpt, Serialize, Deserialize)]
 pub enum Command {
-    Set {
-        key: String,
-        value: String,
-    },
-    Get {
-        key: String,
-    },
-    Rm {
-        key: String,
-    },
+    Set { key: String, value: String },
+    Get { key: String },
+    Rm { key: String },
 }
 
 /// The mainly struct
@@ -48,8 +45,12 @@ impl KvStore {
 
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        serde_json::to_writer(&mut self.file,
-            &Command::Set{ key: key.clone(), value: value.clone()}
+        serde_json::to_writer(
+            &mut self.file,
+            &Command::Set {
+                key: key.clone(),
+                value: value.clone(),
+            },
         )?;
         self.data.insert(key, value);
         Ok(())
@@ -96,9 +97,7 @@ impl KvStore {
     /// # }
     /// ```
     pub fn remove(&mut self, key: String) -> Result<()> {
-        serde_json::to_writer(&mut self.file,
-            &Command::Rm{ key: key.clone()}
-        )?;
+        serde_json::to_writer(&mut self.file, &Command::Rm { key: key.clone() })?;
         self.data.remove(&key);
         Ok(())
     }
@@ -107,7 +106,9 @@ impl KvStore {
         let path: PathBuf = path.into().join("kvs.data");
 
         let file = OpenOptions::new()
-            .read(true).append(true).create(true)
+            .read(true)
+            .append(true)
+            .create(true)
             .open(path)?;
         let mut reader = BufReader::new(&file);
 
@@ -121,10 +122,10 @@ impl KvStore {
             match command {
                 Command::Set { key, value } => {
                     data.insert(key.clone(), value.clone());
-                },
+                }
                 Command::Rm { key } => {
                     data.remove(&key);
-                },
+                }
                 _ => continue,
             }
         }

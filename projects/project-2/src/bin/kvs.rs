@@ -1,7 +1,7 @@
 use std::process::exit;
 
+use kvs::{Command, KvStore, Result};
 use structopt::StructOpt;
-use kvs::{KvStore, Result, Command};
 
 #[derive(StructOpt)]
 #[structopt(name = env!("CARGO_PKG_NAME"),
@@ -24,15 +24,15 @@ fn main() -> Result<()> {
             Command::Set { key, value } => {
                 kvstore.set(key, value)?;
                 return Ok(());
-            },
-            Command::Get { key} => {
+            }
+            Command::Get { key } => {
                 if let Some(value) = kvstore.get(key)? {
                     println!("{}", value);
                 } else {
                     println!("Key not found");
                 }
                 return Ok(());
-            },
+            }
             Command::Rm { key } => {
                 if kvstore.get(key.clone())?.is_some() {
                     kvstore.remove(key)?;
@@ -41,7 +41,7 @@ fn main() -> Result<()> {
                     println!("Key not found");
                     exit(1);
                 }
-            },
+            }
         }
     }
 

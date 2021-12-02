@@ -4,7 +4,12 @@
 
 use failure::format_err;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs::{File, OpenOptions}, io::{BufReader, Seek, SeekFrom, BufWriter, Write, BufRead}, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write},
+    path::PathBuf,
+};
 use structopt::StructOpt;
 
 pub type Result<T> = core::result::Result<T, failure::Error>;
@@ -86,7 +91,7 @@ impl KvStore {
             command.pop();
 
             match serde_json::from_slice(&command)? {
-                Command::Set { key: _ , value } => Ok(Some(value)),
+                Command::Set { key: _, value } => Ok(Some(value)),
                 _ => Err(format_err!("Err Log!!!")),
             }
         } else {

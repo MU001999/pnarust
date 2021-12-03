@@ -49,7 +49,10 @@ impl KvStore {
     /// # }
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        let command = Command::Set { key: key.clone(), value };
+        let command = Command::Set {
+            key: key.clone(),
+            value,
+        };
         let pos = KvStore::write_command_to(self.active_path(), &command)?;
 
         self.index.insert(key, (self.active_nth_file, pos));
@@ -247,10 +250,7 @@ impl KvStore {
     }
 
     fn write_command_to(path: PathBuf, command: &Command) -> Result<u64> {
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(path)?;
+        let file = OpenOptions::new().append(true).create(true).open(path)?;
         KvStore::write_command_to_writer(&mut BufWriter::new(file), command)
     }
 

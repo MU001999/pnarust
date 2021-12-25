@@ -2,7 +2,16 @@
 //!
 //! `kvs` is a key-value store
 
-use failure::format_err;
+mod kvs_client;
+mod kvs_server;
+mod kvs_engine;
+
+pub use kvs_client::KvsClient;
+pub use kvs_server::KvsServer;
+pub use kvs_engine::{KvsEngine, KvStore, SledKvsEngine};
+
+pub use anyhow::{anyhow, Result};
+
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -12,8 +21,6 @@ use std::{
 };
 use structopt::StructOpt;
 use walkdir::WalkDir;
-
-pub type Result<T> = core::result::Result<T, failure::Error>;
 
 #[derive(Clone, StructOpt, Serialize, Deserialize)]
 pub enum Command {
@@ -83,7 +90,7 @@ impl KvStore {
         if let Some(&(n, pos)) = self.index.get(&key) {
             match KvStore::read_command_at(self.path_at(n), pos)? {
                 Command::Set { key: _, value } => Ok(Some(value)),
-                _ => Err(format_err!("Err Log!!!")),
+                _ => Err(anyhow!("Err Log!!!")),
             }
         } else {
             Ok(None)
@@ -118,7 +125,7 @@ impl KvStore {
 
             Ok(())
         } else {
-            Err(format_err!("Key not found"))
+            Err(anyhow!("Key not found"))
         }
     }
 

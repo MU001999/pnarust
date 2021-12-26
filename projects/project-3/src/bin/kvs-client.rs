@@ -1,5 +1,5 @@
 use std::process::exit;
-use kvs::{Command, KvStore, Result};
+use kvs::{Command, KvsEngine, KvStore, Result};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]

@@ -11,37 +11,33 @@ use structopt::StructOpt;
 )]
 struct Config {
     #[structopt(subcommand)]
-    cmd: Option<Command>,
+    cmd: Command,
 }
 
 fn main() -> Result<()> {
     let config = Config::from_args();
 
-    if let Some(cmd) = config.cmd {
-        let mut kvstore = KvStore::open(".")?;
+    let mut kvstore = KvStore::open(".")?;
 
-        match cmd {
-            Command::Set { key, value } => {
-                kvstore.set(key, value)?;
-                return Ok(());
+    match config.cmd {
+        Command::Set { key, value } => {
+            kvstore.set(key, value)?;
+            return Ok(());
+        }
+        Command::Get { key } => {
+            if let Some(value) = kvstore.get(key)? {
+                println!("{}", value);
+            } else {
+                println!("Key not found");
             }
-            Command::Get { key } => {
-                if let Some(value) = kvstore.get(key)? {
-                    println!("{}", value);
-                } else {
-                    println!("Key not found");
-                }
-                return Ok(());
+            return Ok(());
+        }
+        Command::Rm { key } => {
+            if let Err(err) = kvstore.remove(key) {
+                println!("{}", err);
+                exit(1);
             }
-            Command::Rm { key } => {
-                if let Err(err) = kvstore.remove(key) {
-                    println!("{}", err);
-                    exit(1);
-                }
-                return Ok(());
-            }
+            return Ok(());
         }
     }
-
-    panic!()
 }

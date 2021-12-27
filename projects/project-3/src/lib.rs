@@ -15,7 +15,7 @@ pub use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
-#[derive(Clone, StructOpt, Serialize, Deserialize)]
+#[derive(Clone, StructOpt, Serialize, Deserialize, Debug)]
 pub enum Command {
     Set { key: String, value: String },
     Get { key: String },

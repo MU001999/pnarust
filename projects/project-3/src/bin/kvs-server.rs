@@ -1,6 +1,6 @@
-use kvs::Result;
+use kvs::{Result, KvStore, KvsServer};
 use structopt::StructOpt;
-use slog::{info, slog_o};
+use slog::info;
 use sloggers::Build;
 use sloggers::terminal::{TerminalLoggerBuilder, Destination};
 
@@ -28,11 +28,17 @@ fn main() -> Result<()> {
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
     info!(logger, "IP-PORT: {}, ENGINE: {}", &addr, engine.clone().unwrap_or(String::from("kvs")));
 
-    let engine = if engine.is_some() {
-
+    let engine = engine.unwrap_or(String::from("kvs"));
+    let mut engine = if engine == "kvs" {
+        KvStore::open(".")?
+    } else if engine == "sled" {
+        todo!()
     } else {
-
+        panic!("ENGINE-NAME is invalid")
     };
+
+    let mut server = KvsServer::new(&logger, &mut engine, addr)?;
+    server.run()?;
 
     Ok(())
 }

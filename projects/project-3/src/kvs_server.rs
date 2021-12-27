@@ -1,20 +1,20 @@
 use crate::{Result, KvsEngine, Command};
 use slog::{info, Logger};
-use std::{net::{TcpListener, TcpStream}, io::{BufReader, BufWriter}};
+use std::{net::{TcpListener, TcpStream}, io::{BufReader, BufWriter, Write, BufRead}};
 
 pub struct KvsServer<'sv> {
     logger: &'sv Logger,
-    addr: String,
     engine: &'sv mut dyn KvsEngine,
+    addr: String,
 }
 
 impl<'sv> KvsServer<'sv> {
-    pub fn new(logger: &'sv Logger, addr: String, engine: &'sv mut dyn KvsEngine) -> Self {
-        KvsServer {
+    pub fn new(logger: &'sv Logger, engine: &'sv mut dyn KvsEngine, addr: String) -> Result<Self> {
+        Ok(KvsServer {
             logger,
-            addr,
             engine,
-        }
+            addr,
+        })
     }
 
     pub fn run(&mut self) -> Result<()> {
@@ -30,12 +30,19 @@ impl<'sv> KvsServer<'sv> {
     }
 
     fn handle_connection(&mut self, mut stream: TcpStream) -> Result<()> {
-        let reader = BufReader::new(&mut stream);
+        let mut reader = BufReader::new(&mut stream);
 
-        let command = serde_json::from_reader(reader)?;
+        let mut buffer = Vec::new();
+        reader.read_until(b'#', &mut buffer)?;
+        buffer.pop();
+
+        let command = serde_json::from_slice(&buffer[..])?;
+        info!(self.logger, "received command: {:?}", command);
+
         match command {
             Command::Set { key, value} => {
                 self.engine.set(key, value)?;
+                stream.write_all(b"success")?;
             }
             Command::Get { key } => {
                 let writer = BufWriter::new(stream);
@@ -44,6 +51,7 @@ impl<'sv> KvsServer<'sv> {
             }
             Command::Rm { key } => {
                 self.engine.remove(key)?;
+                stream.write_all(b"success")?;
             }
         }
 

@@ -1,4 +1,4 @@
-use crate::{anyhow, Result, Command, KvsEngine};
+use crate::{Error, Result, Command, KvsEngine};
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},
@@ -211,7 +211,7 @@ impl KvsEngine for KvStore {
         if let Some(&(n, pos)) = self.index.get(&key) {
             match KvStore::read_command_at(self.path_at(n), pos)? {
                 Command::Set { key: _, value } => Ok(Some(value)),
-                _ => Err(anyhow!("Err Log!!!")),
+                _ => Err(Error::ErrorLogMeet),
             }
         } else {
             Ok(None)
@@ -246,7 +246,7 @@ impl KvsEngine for KvStore {
 
             Ok(())
         } else {
-            Err(anyhow!("Key not found"))
+            Err(Error::KeyNotFound)
         }
     }
 }

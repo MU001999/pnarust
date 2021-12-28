@@ -2,17 +2,17 @@
 //!
 //! `kvs` is a key-value store
 
+mod error;
 mod de;
 mod ser;
 mod kvs_client;
 mod kvs_server;
 mod kvs_engine;
 
+pub use error::{Error, Result};
 pub use kvs_client::KvsClient;
 pub use kvs_server::KvsServer;
 pub use kvs_engine::{KvsEngine, KvStore, SledKvsEngine};
-
-pub use anyhow::{anyhow, Error, Result};
 
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;

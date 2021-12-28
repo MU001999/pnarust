@@ -55,7 +55,7 @@ impl<'de> Deserializer<'de> {
                 self.input = &self.input[len + crlf.len()..];
                 Ok(s)
             }
-            None => Err(Error::msg("EOF"))
+            None => Err(Error::SerdeError(String::from("EOF Meet")))
         }
     }
 }

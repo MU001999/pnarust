@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use serde::{ser, Serialize};
 use crate::{Error, Result};
 
@@ -29,8 +31,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     type SerializeStructVariant = Self;
 
     fn serialize_bool(self, v: bool) -> Result<()> {
-        self.output += if v { ":1\r\n" } else { ":0\r\n" };
-        Ok(())
+        self.serialize_str(if v { "true" } else { "false" })
     }
 
     fn serialize_i8(self, v: i8) -> Result<()> {
@@ -46,8 +47,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_i64(self, v: i64) -> Result<()> {
-        self.output += format!(":{}\r\n", v).as_str();
-        Ok(())
+        self.serialize_str(&v.to_string())
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
@@ -63,8 +63,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.output += format!(":{}\r\n", v).as_str();
-        Ok(())
+        self.serialize_str(&v.to_string())
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> {
@@ -80,7 +79,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_str(self, v: &str) -> Result<()> {
-        self.output += format!("${}\r\n{}\r\n", v.len(), v).as_str();
+        self.output += format!("'{},{},", v.len(), v).as_str();
         Ok(())
     }
 
@@ -142,7 +141,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self> {
-        self.output += format!("*{}\r\n", len).as_str();
+        self.output += format!("={},", len).as_str();
         Ok(self)
     }
 

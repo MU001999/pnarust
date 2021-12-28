@@ -10,6 +10,8 @@ pub enum Error {
     SerdeError(String),
     #[error("WalkdirError: {0:?}")]
     WalkdirError(#[from] walkdir::Error),
+    #[error("SloggersError: {0:?}")]
+    SloggersError(#[from] sloggers::Error),
     #[error("Error Log Meet")]
     ErrorLogMeet,
     #[error("Key not found")]

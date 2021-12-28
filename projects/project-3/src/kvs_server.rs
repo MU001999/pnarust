@@ -30,7 +30,7 @@ impl<'sv> KvsServer<'sv> {
     }
 
     fn handle_connection(&mut self, mut stream: TcpStream) -> Result<()> {
-        let mut reader = BufReader::new(&mut stream);
+        let mut reader = BufReader::new(&stream);
 
         let mut buffer = Vec::new();
         reader.read_until(b'#', &mut buffer)?;

@@ -26,9 +26,9 @@ fn main() -> Result<()> {
     let Config { addr, engine } = Config::from_args();
 
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
-    info!(logger, "IP-PORT: {}, ENGINE: {}", &addr, engine.clone().unwrap_or(String::from("kvs")));
+    info!(logger, "IP-PORT: {}, ENGINE: {}", &addr, engine.clone().unwrap_or_else(|| String::from("kvs")));
 
-    let engine = engine.unwrap_or(String::from("kvs"));
+    let engine = engine.unwrap_or_else(|| String::from("kvs"));
     let mut engine = if engine == "kvs" {
         KvStore::open(".")?
     } else if engine == "sled" {

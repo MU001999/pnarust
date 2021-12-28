@@ -32,7 +32,7 @@ where
 
 impl<'de> Deserializer<'de> {
     fn peek_char(&mut self) -> Result<char> {
-        self.input.chars().next().ok_or(Error::msg("EOF"))
+        self.input.chars().next().ok_or(Error::custom("EOF"))
     }
 
     fn next_char(&mut self) -> Result<char> {
@@ -44,7 +44,7 @@ impl<'de> Deserializer<'de> {
     fn parse_integer(&mut self) -> Result<i64> {
         self.parse_term()?
             .parse::<i64>()
-            .map_err(|_| Error::msg("expected integer"))
+            .map_err(|_| Error::custom("expected integer"))
     }
 
     fn parse_term(&mut self) -> Result<&'de str> {
@@ -147,7 +147,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         if self.next_char()? == '+' {
             visitor.visit_borrowed_str(self.parse_term()?)
         } else {
-            Err(Error::msg("expected BulkString"))
+            Err(Error::custom("expected BulkString"))
         }
     }
 
@@ -213,7 +213,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 )
             )?)
         } else {
-            Err(Error::msg("expected array"))
+            Err(Error::custom("expected array"))
         }
     }
 

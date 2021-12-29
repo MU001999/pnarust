@@ -1,7 +1,7 @@
 use crate::{Command, KvsEngine, Result};
 use slog::{info, Logger};
 use std::{
-    io::{BufRead, BufReader, BufWriter, Write, Read},
+    io::{BufReader, BufWriter, Read, Write},
     net::{TcpListener, TcpStream},
 };
 

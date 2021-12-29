@@ -115,7 +115,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         variant_index: u32,
         variant: &'static str,
     ) -> Result<()> {
-        self.output += format!("=1,").as_str();
+        self.output += "=1,";
         self.serialize_str(variant)
     }
 
@@ -143,7 +143,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self> {
-        self.serialize_tuple(len.ok_or(Error::SerdeError(String::from("Need sized seq")))?)
+        self.serialize_tuple(len.ok_or_else(|| Error::SerdeError(String::from("Need sized seq")))?)
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self> {

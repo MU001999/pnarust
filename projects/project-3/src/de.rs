@@ -1,7 +1,6 @@
-use serde::de::{
-    self, DeserializeSeed, EnumAccess, Error as _, IntoDeserializer, MapAccess, SeqAccess,
-    VariantAccess, Visitor,
-};
+#![allow(unused_variables)]
+
+use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
 use serde::Deserialize;
 
 use crate::{Error, Result};
@@ -35,7 +34,7 @@ impl<'de> Deserializer<'de> {
         self.input
             .chars()
             .next()
-            .ok_or(Error::SerdeError(String::from("EOF")))
+            .ok_or_else(|| Error::SerdeError(String::from("EOF")))
     }
 
     fn next_char(&mut self) -> Result<char> {
@@ -107,8 +106,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i8(self.parse_string()?.parse::<i8>()
-            .map_err(|_| Error::SerdeError(String::from("Expected i8")))?
+        visitor.visit_i8(
+            self.parse_string()?
+                .parse::<i8>()
+                .map_err(|_| Error::SerdeError(String::from("Expected i8")))?,
         )
     }
 
@@ -116,8 +117,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i16(self.parse_string()?.parse::<i16>()
-            .map_err(|_| Error::SerdeError(String::from("Expected i16")))?
+        visitor.visit_i16(
+            self.parse_string()?
+                .parse::<i16>()
+                .map_err(|_| Error::SerdeError(String::from("Expected i16")))?,
         )
     }
 
@@ -125,8 +128,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i32(self.parse_string()?.parse::<i32>()
-            .map_err(|_| Error::SerdeError(String::from("Expected i32")))?
+        visitor.visit_i32(
+            self.parse_string()?
+                .parse::<i32>()
+                .map_err(|_| Error::SerdeError(String::from("Expected i32")))?,
         )
     }
 
@@ -134,8 +139,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i64(self.parse_string()?.parse::<i64>()
-            .map_err(|_| Error::SerdeError(String::from("Expected i64")))?
+        visitor.visit_i64(
+            self.parse_string()?
+                .parse::<i64>()
+                .map_err(|_| Error::SerdeError(String::from("Expected i64")))?,
         )
     }
 
@@ -143,8 +150,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u8(self.parse_string()?.parse::<u8>()
-            .map_err(|_| Error::SerdeError(String::from("Expected u8")))?
+        visitor.visit_u8(
+            self.parse_string()?
+                .parse::<u8>()
+                .map_err(|_| Error::SerdeError(String::from("Expected u8")))?,
         )
     }
 
@@ -152,8 +161,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u16(self.parse_string()?.parse::<u16>()
-            .map_err(|_| Error::SerdeError(String::from("Expected u16")))?
+        visitor.visit_u16(
+            self.parse_string()?
+                .parse::<u16>()
+                .map_err(|_| Error::SerdeError(String::from("Expected u16")))?,
         )
     }
 
@@ -161,8 +172,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u32(self.parse_string()?.parse::<u32>()
-            .map_err(|_| Error::SerdeError(String::from("Expected u32")))?
+        visitor.visit_u32(
+            self.parse_string()?
+                .parse::<u32>()
+                .map_err(|_| Error::SerdeError(String::from("Expected u32")))?,
         )
     }
 
@@ -170,8 +183,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u64(self.parse_string()?.parse::<u64>()
-            .map_err(|_| Error::SerdeError(String::from("Expected u64")))?
+        visitor.visit_u64(
+            self.parse_string()?
+                .parse::<u64>()
+                .map_err(|_| Error::SerdeError(String::from("Expected u64")))?,
         )
     }
 
@@ -179,8 +194,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_f32(self.parse_string()?.parse::<f32>()
-            .map_err(|_| Error::SerdeError(String::from("Expected f32")))?
+        visitor.visit_f32(
+            self.parse_string()?
+                .parse::<f32>()
+                .map_err(|_| Error::SerdeError(String::from("Expected f32")))?,
         )
     }
 
@@ -188,8 +205,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_f64(self.parse_string()?.parse::<f64>()
-            .map_err(|_| Error::SerdeError(String::from("Expected f64")))?
+        visitor.visit_f64(
+            self.parse_string()?
+                .parse::<f64>()
+                .map_err(|_| Error::SerdeError(String::from("Expected f64")))?,
         )
     }
 
@@ -461,6 +480,6 @@ impl<'de, 'a> VariantAccess<'de> for Enum<'a, 'de> {
     where
         V: Visitor<'de>,
     {
-        Ok(visitor.visit_map(CommaSeparated::new(self.de, self.len))?)
+        visitor.visit_map(CommaSeparated::new(self.de, self.len))
     }
 }

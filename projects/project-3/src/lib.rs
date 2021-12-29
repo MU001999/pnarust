@@ -24,16 +24,8 @@ pub enum Command {
     Rm { key: String },
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Response {
     Success(String),
     Fail(String),
 }
-
-/*
-Set(key1, value1)
-=3,'3,Set,'4,key1,'6,value1,
-Success(value1)
-=2,'7,Success,'6,value1,
-Fail(msg)
-=2,'4,Fail,'3,msg,
-*/

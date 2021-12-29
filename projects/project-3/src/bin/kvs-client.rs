@@ -24,7 +24,7 @@ fn main() -> Result<()> {
     let mut client = KvsClient::connect(addr)?;
     let res = client.send(cmd)?;
 
-    println!("{}", res);
+    println!("{:?}", res);
 
     Ok(())
 }

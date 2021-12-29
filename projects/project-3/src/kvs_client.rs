@@ -1,4 +1,4 @@
-use crate::{Command, Result};
+use crate::{Command, Response, Result};
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -14,13 +14,13 @@ impl KvsClient {
         Ok(KvsClient { stream })
     }
 
-    pub fn send(&mut self, command: Command) -> Result<String> {
+    pub fn send(&mut self, command: Command) -> Result<Response> {
         let buffer = crate::ser::to_string(&command)?;
         self.stream.write_all(buffer.as_bytes())?;
 
-        let mut res = String::new();
-        self.stream.read_to_string(&mut res)?;
+        let mut response = String::new();
+        self.stream.read_to_string(&mut response)?;
 
-        Ok(res)
+        crate::de::from_str(&response)
     }
 }

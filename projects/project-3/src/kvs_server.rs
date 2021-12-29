@@ -1,7 +1,7 @@
-use crate::{Command, KvsEngine, Result};
+use crate::{Command, Response, KvsEngine, Error, Result};
 use slog::{info, Logger};
 use std::{
-    io::{BufReader, BufWriter, Read, Write},
+    io::{BufReader, Read, Write},
     net::{TcpListener, TcpStream},
 };
 
@@ -25,7 +25,7 @@ impl<'sv> KvsServer<'sv> {
 
         for stream in listener.incoming() {
             let stream = stream?;
-            info!(self.logger, "accept connection: {:?}", stream.peer_addr());
+            info!(self.logger, "Accept connection from: {:?}", stream.peer_addr());
             self.handle_connection(stream)?;
         }
 
@@ -39,26 +39,39 @@ impl<'sv> KvsServer<'sv> {
         let len = reader.read(&mut buffer)?;
 
         let request = std::str::from_utf8(&buffer[..len]).unwrap();
-        info!(self.logger, "received data: {:?}", request);
+        info!(self.logger, "Received data: {:?}", request);
 
         let command = crate::de::from_str(request)?;
-        info!(self.logger, "received command: {:?}", command);
+        info!(self.logger, "Received command: {:?}", command);
 
-        match command {
+        let response = match command {
             Command::Set { key, value } => {
-                self.engine.set(key, value)?;
-                stream.write_all(b"success")?;
+                self.engine.set(key.clone(), value.clone())?;
+                info!(self.logger, "Set successfully: value {:?} has been set for key {:?}", key, value);
+                crate::ser::to_string(&Response::SuccessSet())?
             }
             Command::Get { key } => {
-                let writer = BufWriter::new(stream);
-                let value = self.engine.get(key)?;
-                serde_json::to_writer(writer, &value)?;
+                let value = self.engine.get(key.clone())?;
+                info!(self.logger, "Get successfully: value {:?}", value);
+                crate::ser::to_string(&Response::SuccessGet(value))?
             }
             Command::Rm { key } => {
-                self.engine.remove(key)?;
-                stream.write_all(b"success")?;
+                match self.engine.remove(key.clone()) {
+                    Ok(()) => {
+                        info!(self.logger, "Rm successfully: key {:?}", key);
+                        crate::ser::to_string(&Response::SuccessRm())?
+                    }
+                    Err(Error::KeyNotFound) => {
+                        info!(self.logger, "Rm failed: key {:?}", key);
+                        crate::ser::to_string(&Response::Fail(String::from("Key not found")))?
+                    }
+                    Err(e) => return Err(e)
+                }
             }
-        }
+        };
+
+        stream.write_all(response.as_bytes())?;
+        info!(self.logger, "Response: {:?}", response);
 
         Ok(())
     }

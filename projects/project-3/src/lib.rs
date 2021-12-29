@@ -26,6 +26,8 @@ pub enum Command {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Response {
-    Success(String),
+    SuccessSet(),
+    SuccessGet(Option<String>),
+    SuccessRm(),
     Fail(String),
 }

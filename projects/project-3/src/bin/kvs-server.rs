@@ -1,8 +1,8 @@
-use kvs::{Result, KvStore, KvsServer};
-use structopt::StructOpt;
+use kvs::{KvStore, KvsServer, Result};
 use slog::info;
+use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
-use sloggers::terminal::{TerminalLoggerBuilder, Destination};
+use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(name = "kvs-server",
@@ -11,7 +11,11 @@ use sloggers::terminal::{TerminalLoggerBuilder, Destination};
     about = env!("CARGO_PKG_DESCRIPTION")
 )]
 struct Config {
-    #[structopt(long = "addr", value_name = "IP-PORT", default_value = "127.0.0.1:4000")]
+    #[structopt(
+        long = "addr",
+        value_name = "IP-PORT",
+        default_value = "127.0.0.1:4000"
+    )]
     addr: String,
     #[structopt(long = "engine", value_name = "ENGINE-NAME")]
     engine: Option<String>,
@@ -26,7 +30,12 @@ fn main() -> Result<()> {
     let Config { addr, engine } = Config::from_args();
 
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
-    info!(logger, "IP-PORT: {}, ENGINE: {}", &addr, engine.clone().unwrap_or_else(|| String::from("kvs")));
+    info!(
+        logger,
+        "IP-PORT: {}, ENGINE: {}",
+        &addr,
+        engine.clone().unwrap_or_else(|| String::from("kvs"))
+    );
 
     let engine = engine.unwrap_or_else(|| String::from("kvs"));
     let mut engine = if engine == "kvs" {

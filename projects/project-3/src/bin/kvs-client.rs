@@ -10,7 +10,11 @@ use structopt::StructOpt;
 struct Config {
     #[structopt(subcommand)]
     cmd: Command,
-    #[structopt(long = "addr", value_name = "IP-PORT", default_value = "127.0.0.1:4000")]
+    #[structopt(
+        long = "addr",
+        value_name = "IP-PORT",
+        default_value = "127.0.0.1:4000"
+    )]
     addr: String,
 }
 

@@ -1,8 +1,6 @@
-use crate::{Result, KvsEngine};
+use crate::{KvsEngine, Result};
 
-pub struct SledKvsEngine {
-
-}
+pub struct SledKvsEngine {}
 
 impl KvsEngine for SledKvsEngine {
     fn set(&mut self, _key: String, _value: String) -> Result<()> {

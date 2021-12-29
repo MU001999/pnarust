@@ -1,4 +1,4 @@
-use crate::{Error, Result, Command, KvsEngine};
+use crate::{Command, Error, KvsEngine, Result};
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},

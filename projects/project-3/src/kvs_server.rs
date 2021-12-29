@@ -1,6 +1,9 @@
-use crate::{Result, KvsEngine, Command};
+use crate::{Command, KvsEngine, Result};
 use slog::{info, Logger};
-use std::{net::{TcpListener, TcpStream}, io::{BufReader, BufWriter, Write, BufRead}};
+use std::{
+    io::{BufRead, BufReader, BufWriter, Write, Read},
+    net::{TcpListener, TcpStream},
+};
 
 pub struct KvsServer<'sv> {
     logger: &'sv Logger,
@@ -32,15 +35,17 @@ impl<'sv> KvsServer<'sv> {
     fn handle_connection(&mut self, mut stream: TcpStream) -> Result<()> {
         let mut reader = BufReader::new(&stream);
 
-        let mut buffer = Vec::new();
-        reader.read_until(b'#', &mut buffer)?;
-        buffer.pop();
+        let mut buffer = [0; 1024];
+        let len = reader.read(&mut buffer)?;
 
-        let command = serde_json::from_slice(&buffer[..])?;
+        let request = std::str::from_utf8(&buffer[..len]).unwrap();
+        info!(self.logger, "received data: {:?}", request);
+
+        let command = crate::de::from_str(request)?;
         info!(self.logger, "received command: {:?}", command);
 
         match command {
-            Command::Set { key, value} => {
+            Command::Set { key, value } => {
                 self.engine.set(key, value)?;
                 stream.write_all(b"success")?;
             }

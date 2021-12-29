@@ -67,11 +67,11 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> {
-        todo!()
+        self.serialize_str(&v.to_string())
     }
 
     fn serialize_f64(self, v: f64) -> Result<()> {
-        todo!()
+        self.serialize_str(&v.to_string())
     }
 
     fn serialize_char(self, v: char) -> Result<()> {
@@ -88,21 +88,24 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_none(self) -> Result<()> {
-        todo!()
+        self.output += "=1,'4,None,";
+        Ok(())
     }
 
     fn serialize_some<T: ?Sized>(self, value: &T) -> Result<()>
     where
         T: Serialize {
-        todo!()
+        self.output += "=2,'4,Some,";
+        value.serialize(self)
     }
 
     fn serialize_unit(self) -> Result<()> {
-        todo!()
+        self.output += "=0,";
+        Ok(())
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<()> {
-        todo!()
+        self.serialize_unit()
     }
 
     fn serialize_unit_variant(
@@ -111,7 +114,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         variant_index: u32,
         variant: &'static str,
     ) -> Result<()> {
-        todo!()
+        self.output += format!("=1,").as_str();
+        self.serialize_str(variant)
     }
 
     fn serialize_newtype_struct<T: ?Sized>(
@@ -121,7 +125,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     ) -> Result<()>
     where
         T: Serialize {
-        todo!()
+        self.output += "=1,";
+        value.serialize(self)
     }
 
     fn serialize_newtype_variant<T: ?Sized>(
@@ -133,11 +138,13 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     ) -> Result<()>
     where
         T: Serialize {
-        todo!()
+        self.output += "=2,";
+        self.serialize_str(variant)?;
+        value.serialize(self)
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self> {
-        todo!()
+        self.serialize_tuple(len.ok_or(Error::SerdeError(String::from("Need sized seq")))?)
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self> {
@@ -150,7 +157,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         name: &'static str,
         len: usize,
     ) -> Result<Self> {
-        todo!()
+        self.serialize_tuple(len)
     }
 
     fn serialize_tuple_variant(
@@ -160,7 +167,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self> {
-        todo!()
+        self.output += format!("={},", len + 1).as_str();
+        self.serialize_str(variant)?;
+        Ok(self)
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self> {
@@ -172,7 +181,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         name: &'static str,
         len: usize,
     ) -> Result<Self> {
-        todo!()
+        self.serialize_tuple(len)
     }
 
     fn serialize_struct_variant(
@@ -182,7 +191,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self> {
-        todo!()
+        self.serialize_tuple_variant(name, variant_index, variant, len)
     }
 }
 
@@ -251,14 +260,6 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
     type Ok = ();
     type Error = Error;
 
-    // The Serde data model allows map keys to be any serializable type. JSON
-    // only allows string keys so the implementation below will produce invalid
-    // JSON if the key serializes as something other than a string.
-    //
-    // A real JSON serializer would need to validate that map keys are strings.
-    // This can be done by using a different Serializer to serialize the key
-    // (instead of `&mut **self`) and having that other serializer only
-    // implement `serialize_str` and return an error on any other data type.
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
@@ -266,9 +267,6 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
         todo!()
     }
 
-    // It doesn't make a difference whether the colon is printed at the end of
-    // `serialize_key` or at the beginning of `serialize_value`. In this case
-    // the code is a bit simpler having it here.
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,

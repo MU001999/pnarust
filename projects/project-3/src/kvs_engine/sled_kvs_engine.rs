@@ -16,6 +16,7 @@ impl SledKvsEngine {
 impl KvsEngine for SledKvsEngine {
     fn set(&mut self, key: String, value: String) -> Result<()> {
         self.db.insert(key.as_str(), value.as_str())?;
+        self.db.flush()?;
         Ok(())
     }
 
@@ -27,6 +28,7 @@ impl KvsEngine for SledKvsEngine {
     fn remove(&mut self, key: String) -> Result<()> {
         if self.db.contains_key(key.as_str())? {
             self.db.remove(key.as_str())?;
+            self.db.flush()?;
             Ok(())
         } else {
             Err(Error::KeyNotFound)

@@ -1,4 +1,5 @@
 use crate::{Command, Response, Result};
+use std::net::SocketAddr;
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -9,7 +10,7 @@ pub struct KvsClient {
 }
 
 impl KvsClient {
-    pub fn connect(addr: String) -> Result<Self> {
+    pub fn connect(addr: SocketAddr) -> Result<Self> {
         let stream = TcpStream::connect(addr)?;
         Ok(KvsClient { stream })
     }

@@ -170,6 +170,7 @@ impl KvsEngine for KvStore {
     ///
     /// ```
     /// use tempfile::TempDir;
+    /// use kvs::KvsEngine;
     ///
     /// # fn main() -> kvs::Result<()> {
     /// let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -200,6 +201,7 @@ impl KvsEngine for KvStore {
     ///
     /// ```
     /// use tempfile::TempDir;
+    /// use kvs::KvsEngine;
     ///
     /// # fn main() -> kvs::Result<()> {
     /// let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -228,6 +230,7 @@ impl KvsEngine for KvStore {
     ///
     /// ```
     /// use tempfile::TempDir;
+    /// use kvs::KvsEngine;
     ///
     /// # fn main() -> kvs::Result<()> {
     /// let temp_dir = TempDir::new().expect("unable to create temporary working directory");

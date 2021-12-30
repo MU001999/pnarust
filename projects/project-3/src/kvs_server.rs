@@ -47,7 +47,7 @@ impl<'sv> KvsServer<'sv> {
         let response = match command {
             Command::Set { key, value } => {
                 self.engine.set(key.clone(), value.clone())?;
-                info!(self.logger, "Set successfully: value {:?} has been set for key {:?}", key, value);
+                info!(self.logger, "Set successfully: value {:?} has been set for key {:?}", value, key);
                 crate::ser::to_string(&Response::SuccessSet())?
             }
             Command::Get { key } => {

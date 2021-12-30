@@ -20,7 +20,7 @@ impl KvStore {
         let path: PathBuf = path.into();
         let path_at = |n: u64| path.join("kvs.data.".to_owned() + &n.to_string());
 
-        if !path.is_dir() {
+        if !path.exists() {
             fs::create_dir(&path)?;
         }
 

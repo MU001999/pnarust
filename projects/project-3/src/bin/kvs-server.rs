@@ -1,3 +1,6 @@
+use std::net::SocketAddr;
+use std::process::exit;
+
 use kvs::{KvStore, KvsServer, Result};
 use slog::info;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
@@ -28,6 +31,13 @@ fn main() -> Result<()> {
     let logger = builder.build()?;
 
     let Config { addr, engine } = Config::from_args();
+    let addr: SocketAddr = match addr.parse() {
+        Ok(addr) => addr,
+        Err(e) => {
+            eprintln!("IP-PORT does not parse as an address");
+            exit(1);
+        }
+    };
 
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
     info!(

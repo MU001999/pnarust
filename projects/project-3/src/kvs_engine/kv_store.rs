@@ -16,9 +16,13 @@ pub struct KvStore {
 }
 
 impl KvStore {
-    pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
+    pub fn open(path: impl Into<PathBuf>) -> Result<Self> {
         let path: PathBuf = path.into();
         let path_at = |n: u64| path.join("kvs.data.".to_owned() + &n.to_string());
+
+        if !path.is_dir() {
+            fs::create_dir(&path)?;
+        }
 
         // rebuild the in-memory index
         let mut index = HashMap::new();

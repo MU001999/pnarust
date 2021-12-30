@@ -2,17 +2,17 @@ use crate::{Command, Response, KvsEngine, Error, Result};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
-    net::{TcpListener, TcpStream},
+    net::{TcpListener, TcpStream, SocketAddr},
 };
 
 pub struct KvsServer<'sv> {
     logger: &'sv Logger,
     engine: &'sv mut dyn KvsEngine,
-    addr: String,
+    addr: SocketAddr,
 }
 
 impl<'sv> KvsServer<'sv> {
-    pub fn new(logger: &'sv Logger, engine: &'sv mut dyn KvsEngine, addr: String) -> Result<Self> {
+    pub fn new(logger: &'sv Logger, engine: &'sv mut dyn KvsEngine, addr: SocketAddr) -> Result<Self> {
         Ok(KvsServer {
             logger,
             engine,

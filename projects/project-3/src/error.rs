@@ -17,6 +17,9 @@ pub enum Error {
     #[error("SloggersError: {0:?}")]
     SloggersError(#[from] sloggers::Error),
 
+    #[error("SledError: {0:?}")]
+    SledError(#[from] sled::Error),
+
     #[error("Error Log Meet")]
     ErrorLogMeet,
 

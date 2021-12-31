@@ -209,16 +209,16 @@ impl KvStore {
                 pos = KvStore::write_command_to_writer(&mut writer, &command)?;
             }
 
-            new_index.insert(key.clone(), (self.active_nth_file, pos));
+            new_index.insert(key.clone(), (0, pos));
         }
-
-        self.index = new_index;
 
         for i in 0..self.active_nth_file {
             fs::remove_file(self.path_at(i))?;
         }
         fs::rename(active_path, self.path_at(0))?;
+
         self.active_nth_file = 0;
+        self.index = new_index;
 
         Ok(())
     }

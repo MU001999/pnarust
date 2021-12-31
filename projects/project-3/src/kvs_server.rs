@@ -51,7 +51,7 @@ impl<'sv> KvsServer<'sv> {
                 crate::ser::to_string(&Response::SuccessSet())?
             }
             Command::Get { key } => {
-                let value = self.engine.get(key.clone())?;
+                let value = self.engine.get(key)?;
                 info!(self.logger, "Get successfully: value {:?}", value);
                 crate::ser::to_string(&Response::SuccessGet(value))?
             }

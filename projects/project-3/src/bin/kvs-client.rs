@@ -41,7 +41,7 @@ pub enum Config {
 }
 
 impl Config {
-    fn to_command(self) -> Command {
+    fn into_command(self) -> Command {
         match self {
             Config::Set { key, value, .. } => Command::Set { key, value },
             Config::Get { key, .. } => Command::Get {key},
@@ -63,7 +63,7 @@ fn main() -> Result<()> {
     let addr: SocketAddr = config.addr().parse().expect("IP-PORT does not parse as an address");
 
     let mut client = KvsClient::connect(addr)?;
-    match client.send(config.to_command())? {
+    match client.send(config.into_command())? {
         Response::Fail(msg) => {
             eprintln!("{}", msg);
             exit(1);

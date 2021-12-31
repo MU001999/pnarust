@@ -1,8 +1,8 @@
 use std::net::SocketAddr;
-use std::process::exit;
 use std::path::Path;
+use std::process::exit;
 
-use kvs::{KvStore, SledKvsEngine, KvsServer, Result};
+use kvs::{KvStore, KvsServer, Result, SledKvsEngine};
 use slog::info;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
@@ -27,7 +27,8 @@ struct Config {
 
 #[derive(PartialEq, Eq)]
 enum EngineKind {
-    Kvs, Sled
+    Kvs,
+    Sled,
 }
 
 impl EngineKind {
@@ -47,14 +48,12 @@ fn main() -> Result<()> {
     let Config { addr, engine } = Config::from_args();
 
     let addr: SocketAddr = addr.parse().expect("IP-PORT does not parse as an address");
-    let engine = engine.map(|val| {
-        match val.as_str() {
-            "kvs" => EngineKind::Kvs,
-            "sled" => EngineKind::Sled,
-            _ => {
-                eprintln!("ENGINE-NAME is either 'kvs' or 'sled'");
-                exit(1);
-            }
+    let engine = engine.map(|val| match val.as_str() {
+        "kvs" => EngineKind::Kvs,
+        "sled" => EngineKind::Sled,
+        _ => {
+            eprintln!("ENGINE-NAME is either 'kvs' or 'sled'");
+            exit(1);
         }
     });
 
@@ -67,17 +66,13 @@ fn main() -> Result<()> {
     };
 
     let engine = match (engine, exist_engine) {
-        (None, None) => {
-            EngineKind::Kvs
-        }
+        (None, None) => EngineKind::Kvs,
         (Some(en1), Some(en2)) if en1 == en2 => en1,
         (Some(_), Some(_)) => {
             eprintln!("data was previously persisted with a different engine than selected");
             exit(1);
         }
-        (en1, en2) => {
-            en1.or(en2).unwrap()
-        }
+        (en1, en2) => en1.or(en2).unwrap(),
     };
 
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));

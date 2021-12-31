@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kvs::{KvsEngine, KvStore, SledKvsEngine};
-use rand::prelude::SliceRandom;
-use tempfile::TempDir;
-use rand::Rng;
+use kvs::{KvStore, KvsEngine, SledKvsEngine};
 use rand::distributions::Alphanumeric;
+use rand::prelude::SliceRandom;
+use rand::Rng;
+use tempfile::TempDir;
 
 fn generate_str(min: usize, max: usize) -> String {
     let mut rng = rand::thread_rng();
@@ -19,16 +19,22 @@ fn generate_str(min: usize, max: usize) -> String {
 pub fn criterion_benchmark(c: &mut Criterion) {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
 
-    let mut db_kvs = KvStore::open(temp_dir.path().join("db.kvs")).expect("unable to open the KvStore");
-    let mut db_sled = SledKvsEngine::open(temp_dir.path().join("db.sled")).expect("unable to open the Sled Engine");
+    let mut db_kvs =
+        KvStore::open(temp_dir.path().join("db.kvs")).expect("unable to open the KvStore");
+    let mut db_sled = SledKvsEngine::open(temp_dir.path().join("db.sled"))
+        .expect("unable to open the Sled Engine");
 
-    let mut key_vals: Vec<(String, String)> = (0..100).map(|_| (generate_str(1, 100000), generate_str(1, 100000))).collect();
+    let mut key_vals: Vec<(String, String)> = (0..100)
+        .map(|_| (generate_str(1, 100000), generate_str(1, 100000)))
+        .collect();
 
     c.bench_function("kvs_write", |b| {
         for (key, value) in &key_vals {
             let (key, value) = (key.as_str(), value.as_str());
             b.iter(|| {
-                db_kvs.set(key.to_owned(), value.to_owned()).expect("unable to set");
+                db_kvs
+                    .set(key.to_owned(), value.to_owned())
+                    .expect("unable to set");
             })
         }
     });
@@ -37,7 +43,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         for (key, value) in &key_vals {
             let (key, value) = (key.as_str(), value.as_str());
             b.iter(|| {
-                db_sled.set(key.to_owned(), value.to_owned()).expect("unable to set");
+                db_sled
+                    .set(key.to_owned(), value.to_owned())
+                    .expect("unable to set");
             })
         }
     });

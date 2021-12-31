@@ -1,14 +1,14 @@
+use crate::{Error, KvsEngine, Result};
 use std::path::PathBuf;
-use crate::{KvsEngine, Error, Result};
 
 pub struct SledKvsEngine {
-    db: sled::Db
+    db: sled::Db,
 }
 
 impl SledKvsEngine {
     pub fn open(path: impl Into<PathBuf>) -> Result<Self> {
         Ok(SledKvsEngine {
-            db: sled::open(path.into())?
+            db: sled::open(path.into())?,
         })
     }
 }

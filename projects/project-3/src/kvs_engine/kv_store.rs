@@ -30,7 +30,12 @@ impl KvStore {
 
         // if no file exists, set active_nth_file 0
         if !path_at(0).exists() {
-            let active_writer = BufWriter::new(OpenOptions::new().create(true).write(true).open(path_at(0))?);
+            let active_writer = BufWriter::new(
+                OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .open(path_at(0))?,
+            );
             return Ok(KvStore {
                 index,
                 path,
@@ -76,7 +81,12 @@ impl KvStore {
             }
         }
 
-        let active_writer = BufWriter::new(OpenOptions::new().create(true).append(true).open(path_at(nfile - 1))?);
+        let active_writer = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path_at(nfile - 1))?,
+        );
         Ok(KvStore {
             index,
             path,
@@ -112,7 +122,12 @@ impl KvStore {
 
         self.index = new_index;
         self.active_nth_file = 0;
-        self.active_writer = BufWriter::new(OpenOptions::new().create(true).append(true).open(self.active_path())?);
+        self.active_writer = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(self.active_path())?,
+        );
 
         Ok(())
     }
@@ -122,7 +137,12 @@ impl KvStore {
         if last_pos > SINGLE_FILE_SIZE {
             // create new file if the active file is large
             self.active_nth_file += 1;
-            self.active_writer = BufWriter::new(OpenOptions::new().create(true).write(true).open(self.active_path())?);
+            self.active_writer = BufWriter::new(
+                OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .open(self.active_path())?,
+            );
 
             if (self.index.len() as u64) < self.active_nth_file * 1024 {
                 // compact logs if active records are much less than old records

@@ -1,6 +1,6 @@
-use std::process::exit;
-use kvs::{Command, Response, KvsClient, Result};
+use kvs::{Command, KvsClient, Response, Result};
 use std::net::SocketAddr;
+use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -44,23 +44,30 @@ impl Config {
     fn into_command(self) -> Command {
         match self {
             Config::Set { key, value, .. } => Command::Set { key, value },
-            Config::Get { key, .. } => Command::Get {key},
-            Config::Rm { key, .. } => Command::Rm{key},
+            Config::Get { key, .. } => Command::Get { key },
+            Config::Rm { key, .. } => Command::Rm { key },
         }
     }
 
-    fn addr(&self) -> String {
+    fn addr(&self) -> &str {
         match self {
-            Config::Set { key: _, value: _, addr } => addr.clone(),
-            Config::Get { key: _, addr } => addr.clone(),
-            Config::Rm { key: _, addr } => addr.clone(),
+            Config::Set {
+                key: _,
+                value: _,
+                addr,
+            } => addr.as_str(),
+            Config::Get { key: _, addr } => addr.as_str(),
+            Config::Rm { key: _, addr } => addr.as_str(),
         }
     }
 }
 
 fn main() -> Result<()> {
     let config = Config::from_args();
-    let addr: SocketAddr = config.addr().parse().expect("IP-PORT does not parse as an address");
+    let addr: SocketAddr = config
+        .addr()
+        .parse()
+        .expect("IP-PORT does not parse as an address");
 
     let mut client = KvsClient::connect(addr)?;
     match client.send(config.into_command())? {
@@ -68,13 +75,11 @@ fn main() -> Result<()> {
             eprintln!("{}", msg);
             exit(1);
         }
-        Response::SuccessGet(value) => {
-            match value {
-                Some(value) => println!("{}", value),
-                None => println!("Key not found"),
-            }
-        }
-        _ => ()
+        Response::SuccessGet(value) => match value {
+            Some(value) => println!("{}", value),
+            None => println!("Key not found"),
+        },
+        _ => (),
     }
 
     Ok(())

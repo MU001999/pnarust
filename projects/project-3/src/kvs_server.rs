@@ -1,8 +1,8 @@
-use crate::{Command, Response, KvsEngine, Error, Result};
+use crate::{Command, Error, KvsEngine, Response, Result};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
-    net::{TcpListener, TcpStream, SocketAddr},
+    net::{SocketAddr, TcpListener, TcpStream},
 };
 
 pub struct KvsServer<'sv> {
@@ -12,7 +12,11 @@ pub struct KvsServer<'sv> {
 }
 
 impl<'sv> KvsServer<'sv> {
-    pub fn new(logger: &'sv Logger, engine: &'sv mut dyn KvsEngine, addr: SocketAddr) -> Result<Self> {
+    pub fn new(
+        logger: &'sv Logger,
+        engine: &'sv mut dyn KvsEngine,
+        addr: SocketAddr,
+    ) -> Result<Self> {
         Ok(KvsServer {
             logger,
             engine,
@@ -25,7 +29,11 @@ impl<'sv> KvsServer<'sv> {
 
         for stream in listener.incoming() {
             let stream = stream?;
-            info!(self.logger, "Accept connection from: {:?}", stream.peer_addr());
+            info!(
+                self.logger,
+                "Accept connection from: {:?}",
+                stream.peer_addr()
+            );
             self.handle_connection(stream)?;
         }
 
@@ -47,7 +55,10 @@ impl<'sv> KvsServer<'sv> {
         let response = match command {
             Command::Set { key, value } => {
                 self.engine.set(key.clone(), value.clone())?;
-                info!(self.logger, "Set successfully: value {:?} has been set for key {:?}", value, key);
+                info!(
+                    self.logger,
+                    "Set successfully: value {:?} has been set for key {:?}", value, key
+                );
                 crate::ser::to_string(&Response::SuccessSet())?
             }
             Command::Get { key } => {
@@ -55,19 +66,17 @@ impl<'sv> KvsServer<'sv> {
                 info!(self.logger, "Get successfully: value {:?}", value);
                 crate::ser::to_string(&Response::SuccessGet(value))?
             }
-            Command::Rm { key } => {
-                match self.engine.remove(key.clone()) {
-                    Ok(()) => {
-                        info!(self.logger, "Rm successfully: key {:?}", key);
-                        crate::ser::to_string(&Response::SuccessRm())?
-                    }
-                    Err(Error::KeyNotFound) => {
-                        info!(self.logger, "Rm failed: key {:?}", key);
-                        crate::ser::to_string(&Response::Fail(String::from("Key not found")))?
-                    }
-                    Err(e) => return Err(e)
+            Command::Rm { key } => match self.engine.remove(key.clone()) {
+                Ok(()) => {
+                    info!(self.logger, "Rm successfully: key {:?}", key);
+                    crate::ser::to_string(&Response::SuccessRm())?
                 }
-            }
+                Err(Error::KeyNotFound) => {
+                    info!(self.logger, "Rm failed: key {:?}", key);
+                    crate::ser::to_string(&Response::Fail(String::from("Key not found")))?
+                }
+                Err(e) => return Err(e),
+            },
         };
 
         stream.write_all(response.as_bytes())?;

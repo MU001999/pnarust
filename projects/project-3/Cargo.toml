@@ -10,7 +10,6 @@ assert_cmd = "0.11"
 criterion = "0.3.5"
 predicates = "1.0.0"
 rand = "0.8.4"
-random-string = "1.0.0"
 tempfile = "3.0.7"
 walkdir = "2.2.7"
 
@@ -27,3 +26,5 @@ walkdir = "2.2.7"
 [[bench]]
 name = "benches"
 harness = false
+
+[features]

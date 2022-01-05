@@ -177,11 +177,8 @@ impl KvStore {
         writer.seek(SeekFrom::End(0))?;
         let pos = writer.stream_position()?;
 
-        let mut buffer = serde_json::to_vec(command)?;
-        buffer.push(b'#');
-
-        writer.write_all(&buffer)?;
-        writer.flush()?;
+        serde_json::to_writer(&mut *writer, command)?;
+        writer.write(b"#")?;
 
         Ok(pos)
     }
@@ -211,6 +208,7 @@ impl KvsEngine for KvStore {
             value,
         };
         let pos = KvStore::write_command_to_writer(&mut self.active_writer, &command)?;
+        self.active_writer.flush()?;
 
         self.index.insert(key, (self.active_nth_file, pos));
         self.try_compact(pos)?;
@@ -271,6 +269,7 @@ impl KvsEngine for KvStore {
         if self.index.contains_key(&key) {
             let command = Command::Rm { key: key.clone() };
             let pos = KvStore::write_command_to(self.active_path(), &command)?;
+            self.active_writer.flush()?;
 
             self.index.remove(&key);
             self.try_compact(pos)?;

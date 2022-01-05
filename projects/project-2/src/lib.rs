@@ -258,10 +258,8 @@ impl KvStore {
         writer.seek(SeekFrom::End(0))?;
         let pos = writer.stream_position()?;
 
-        let mut buffer = serde_json::to_vec(command)?;
-        buffer.push(b'#');
-
-        writer.write_all(&buffer)?;
+        serde_json::to_writer(&mut *writer, command)?;
+        writer.write(b"#")?;
 
         Ok(pos)
     }

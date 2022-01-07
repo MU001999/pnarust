@@ -169,11 +169,6 @@ impl KvStore {
         Ok(serde_json::from_slice(&command)?)
     }
 
-    fn write_command_to(path: PathBuf, command: &Command) -> Result<u64> {
-        let file = OpenOptions::new().append(true).create(true).open(path)?;
-        KvStore::write_command_to_writer(&mut BufWriter::new(file), command)
-    }
-
     fn write_command_to_writer(writer: &mut BufWriter<File>, command: &Command) -> Result<u64> {
         writer.seek(SeekFrom::End(0))?;
         let pos = writer.stream_position()?;
@@ -269,7 +264,7 @@ impl KvsEngine for KvStore {
     fn remove(&mut self, key: String) -> Result<()> {
         if self.index.contains_key(&key) {
             let command = Command::Rm { key: key.clone() };
-            let pos = KvStore::write_command_to(self.active_path(), &command)?;
+            let pos = KvStore::write_command_to_writer(&mut self.active_writer, &command)?;
             self.active_writer.flush()?;
 
             self.index.remove(&key);

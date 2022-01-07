@@ -1,4 +1,5 @@
-use crate::{Error, KvsEngine, Result};
+use super::KvsEngine;
+use crate::{Error, Result};
 use std::path::PathBuf;
 
 pub struct SledKvsEngine {

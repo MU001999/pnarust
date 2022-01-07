@@ -1,4 +1,5 @@
-use crate::{Command, Error, KvsEngine, Result};
+use super::KvsEngine;
+use crate::{Command, Error, Result};
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},
@@ -178,7 +179,7 @@ impl KvStore {
         let pos = writer.stream_position()?;
 
         serde_json::to_writer(&mut *writer, command)?;
-        writer.write(b"#")?;
+        writer.write_all(b"#")?;
 
         Ok(pos)
     }

@@ -1,5 +1,6 @@
-use crate::{Error, KvsEngine, Result};
+use crate::{Error, Result};
 use std::path::PathBuf;
+use super::KvsEngine;
 
 pub struct SledKvsEngine {
     db: sled::Db,
@@ -14,18 +15,18 @@ impl SledKvsEngine {
 }
 
 impl KvsEngine for SledKvsEngine {
-    fn set(&mut self, key: String, value: String) -> Result<()> {
+    fn set(&self, key: String, value: String) -> Result<()> {
         self.db.insert(key.as_str(), value.as_str())?;
         self.db.flush()?;
         Ok(())
     }
 
-    fn get(&mut self, key: String) -> Result<Option<String>> {
+    fn get(&self, key: String) -> Result<Option<String>> {
         let value = self.db.get(key.as_str())?;
         Ok(value.map(|val| String::from_utf8_lossy(val.as_ref()).to_string()))
     }
 
-    fn remove(&mut self, key: String) -> Result<()> {
+    fn remove(&self, key: String) -> Result<()> {
         if self.db.contains_key(key.as_str())? {
             self.db.remove(key.as_str())?;
             self.db.flush()?;

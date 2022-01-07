@@ -8,6 +8,7 @@ mod kvs_client;
 mod kvs_engine;
 mod kvs_server;
 mod ser;
+pub mod thread_pool;
 
 pub use error::{Error, Result};
 pub use kvs_client::KvsClient;

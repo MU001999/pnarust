@@ -9,5 +9,7 @@ pub use shared_queue_thread_pool::SharedQueueThreadPool;
 
 pub trait ThreadPool: Sized {
     fn new(threads: u32) -> Result<Self>;
-    fn spawn<F>(&self, job: F) where F: FnOnce() + Send + 'static;
+    fn spawn<F>(&self, job: F)
+    where
+        F: FnOnce() + Send + 'static;
 }

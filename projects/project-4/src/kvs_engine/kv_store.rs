@@ -1,13 +1,13 @@
+use super::KvsEngine;
 use crate::{Command, Error, Result};
+use std::sync::{Arc, RwLock};
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},
     io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write},
     path::PathBuf,
 };
-use std::sync::{Arc, RwLock};
 use walkdir::WalkDir;
-use super::KvsEngine;
 
 const SINGLE_FILE_SIZE: u64 = 1024 * 1024;
 
@@ -162,7 +162,7 @@ impl KvStore {
         let pos = writer.stream_position()?;
 
         serde_json::to_writer(&mut *writer, command)?;
-        writer.write(b"#")?;
+        writer.write_all(b"#")?;
 
         Ok(pos)
     }
@@ -172,7 +172,7 @@ impl Clone for KvStore {
     fn clone(&self) -> Self {
         KvStore {
             lock: Arc::clone(&self.lock),
-            path: self.path.clone()
+            path: self.path.clone(),
         }
     }
 }

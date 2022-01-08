@@ -1,4 +1,4 @@
-use crate::{Command, Error, KvsEngine, Response, Result};
+use crate::{Command, Error, KvsEngine, KvStore, Response, Result};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
@@ -7,14 +7,14 @@ use std::{
 
 pub struct KvsServer<'sv> {
     logger: &'sv Logger,
-    engine: &'sv mut dyn KvsEngine,
+    engine: KvStore,
     addr: SocketAddr,
 }
 
 impl<'sv> KvsServer<'sv> {
     pub fn new(
         logger: &'sv Logger,
-        engine: &'sv mut dyn KvsEngine,
+        engine: KvStore,
         addr: SocketAddr,
     ) -> Result<Self> {
         Ok(KvsServer {

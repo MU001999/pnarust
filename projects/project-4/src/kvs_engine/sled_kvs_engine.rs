@@ -2,6 +2,7 @@ use crate::{Error, Result};
 use std::path::PathBuf;
 use super::KvsEngine;
 
+#[derive(Clone)]
 pub struct SledKvsEngine {
     db: sled::Db,
 }

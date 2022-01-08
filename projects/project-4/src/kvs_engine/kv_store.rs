@@ -5,15 +5,20 @@ use std::{
     io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write},
     path::PathBuf,
 };
+use std::sync::{Arc, RwLock};
 use walkdir::WalkDir;
 use super::KvsEngine;
 
 const SINGLE_FILE_SIZE: u64 = 1024 * 1024;
 
-pub struct KvStore {
+struct KvStoreState {
     index: HashMap<String, (u64, u64)>,
-    path: PathBuf,
     active_nth_file: u64,
+}
+
+pub struct KvStore {
+    lock: Arc<RwLock<KvStoreState>>,
+    path: PathBuf,
 }
 
 impl KvStore {
@@ -30,10 +35,13 @@ impl KvStore {
 
         // if no file exists, set active_nth_file 0
         if !path_at(0).exists() {
-            return Ok(KvStore {
+            let state = KvStoreState {
                 index,
-                path,
                 active_nth_file: 0,
+            };
+            return Ok(KvStore {
+                lock: Arc::new(RwLock::new(state)),
+                path,
             });
         }
 
@@ -74,10 +82,13 @@ impl KvStore {
             }
         }
 
-        Ok(KvStore {
+        let state = KvStoreState {
             index,
-            path,
             active_nth_file: nfile - 1,
+        };
+        Ok(KvStore {
+            lock: Arc::new(RwLock::new(state)),
+            path,
         })
     }
 
@@ -85,42 +96,41 @@ impl KvStore {
         self.path.join("kvs.data.".to_owned() + &n.to_string())
     }
 
-    fn active_path(&self) -> PathBuf {
-        self.path_at(self.active_nth_file)
+    fn active_path(&self, state: &KvStoreState) -> PathBuf {
+        self.path_at(state.active_nth_file)
     }
 
     // rewrite records to the active file
-    fn compact(&self) -> Result<()> {
+    fn compact(&self, state: &mut KvStoreState) -> Result<()> {
         let mut new_index = HashMap::new();
-        for (key, (n, mut pos)) in &self.index {
-            if *n < self.active_nth_file {
+        for (key, (n, mut pos)) in &state.index {
+            if *n < state.active_nth_file {
                 let command = KvStore::read_command_from(self.path_at(*n), pos)?;
-                pos = KvStore::write_command_to(self.active_path(), &command)?;
+                pos = KvStore::write_command_to(self.active_path(state), &command)?;
             }
 
             new_index.insert(key.clone(), (0, pos));
         }
 
-        for i in 0..self.active_nth_file {
+        for i in 0..state.active_nth_file {
             fs::remove_file(self.path_at(i))?;
         }
-        fs::rename(self.active_path(), self.path_at(0))?;
+        fs::rename(self.active_path(state), self.path_at(0))?;
 
-        // self.index = new_index;
-        // self.active_nth_file = 0;
+        state.index = new_index;
+        state.active_nth_file = 0;
 
         Ok(())
     }
 
-    fn try_compact(&self, last_pos: u64) -> Result<()> {
-        // TODO: control the crash
+    fn try_compact(&self, last_pos: u64, state: &mut KvStoreState) -> Result<()> {
         if last_pos > SINGLE_FILE_SIZE {
             // create new file if the active file is large
-            // self.active_nth_file += 1;
+            state.active_nth_file += 1;
 
-            if (self.index.len() as u64) < self.active_nth_file * 1024 {
+            if (state.index.len() as u64) < state.active_nth_file * 1024 {
                 // compact logs if active records are much less than old records
-                self.compact()?;
+                self.compact(state)?;
             }
         }
         Ok(())
@@ -160,7 +170,10 @@ impl KvStore {
 
 impl Clone for KvStore {
     fn clone(&self) -> Self {
-        todo!()
+        KvStore {
+            lock: Arc::clone(&self.lock),
+            path: self.path.clone()
+        }
     }
 }
 
@@ -183,14 +196,17 @@ impl KvsEngine for KvStore {
     /// # }
     /// ```
     fn set(&self, key: String, value: String) -> Result<()> {
+        let mut state = self.lock.write().unwrap();
+
         let command = Command::Set {
             key: key.clone(),
             value,
         };
-        let pos = KvStore::write_command_to(self.active_path(), &command)?;
+        let pos = KvStore::write_command_to(self.active_path(&state), &command)?;
 
-        // self.index.insert(key, (self.active_nth_file, pos));
-        self.try_compact(pos)?;
+        let active_nth_file = state.active_nth_file;
+        state.index.insert(key, (active_nth_file, pos));
+        self.try_compact(pos, &mut state)?;
 
         Ok(())
     }
@@ -215,7 +231,8 @@ impl KvsEngine for KvStore {
     /// # }
     /// ```
     fn get(&self, key: String) -> Result<Option<String>> {
-        if let Some(&(n, pos)) = self.index.get(&key) {
+        let state = self.lock.read().unwrap();
+        if let Some(&(n, pos)) = state.index.get(&key) {
             match KvStore::read_command_from(self.path_at(n), pos)? {
                 Command::Set { key: _, value } => Ok(Some(value)),
                 _ => Err(Error::ErrorLogMeet),
@@ -245,12 +262,14 @@ impl KvsEngine for KvStore {
     /// # }
     /// ```
     fn remove(&self, key: String) -> Result<()> {
-        if self.index.contains_key(&key) {
-            let command = Command::Rm { key: key.clone() };
-            let pos = KvStore::write_command_to(self.active_path(), &command)?;
+        let mut state = self.lock.write().unwrap();
 
-            // self.index.remove(&key);
-            self.try_compact(pos)?;
+        if state.index.contains_key(&key) {
+            let command = Command::Rm { key: key.clone() };
+            let pos = KvStore::write_command_to(self.active_path(&state), &command)?;
+
+            state.index.remove(&key);
+            self.try_compact(pos, &mut state)?;
 
             Ok(())
         } else {

@@ -1,15 +1,18 @@
 use super::ThreadPool;
+use crate::Result;
 
 pub struct NaiveThreadPool {
-
+    // ...
 }
 
 impl ThreadPool for NaiveThreadPool {
-    fn new(threads: u32) -> crate::Result<Self> {
-        todo!()
+    fn new(_threads: u32) -> Result<Self> {
+        Ok(NaiveThreadPool{})
     }
 
     fn spawn<F>(&self, job: F) where F: FnOnce() + Send + 'static {
-        todo!()
+        std::thread::spawn(move || {
+            job()
+        });
     }
 }

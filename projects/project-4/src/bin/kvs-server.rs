@@ -84,9 +84,8 @@ fn main() -> Result<()> {
             KvsServer::new(logger, engine, addr)?.run()?;
         }
         EngineKind::Sled => {
-            todo!()
-            // let mut engine = SledKvsEngine::open("db.".to_owned() + engine.as_str())?;
-            // KvsServer::new(logger, engine, addr)?.run()?;
+            let engine = SledKvsEngine::open("db.".to_owned() + engine.as_str())?;
+            KvsServer::new(logger, engine, addr)?.run()?;
         }
     };
 

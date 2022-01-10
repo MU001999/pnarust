@@ -1,5 +1,5 @@
-use crate::thread_pool::NaiveThreadPool;
-use crate::{thread_pool::ThreadPool, Command, Error, KvStore, KvsEngine, Response, Result};
+use crate::thread_pool::{NaiveThreadPool, SharedQueueThreadPool};
+use crate::{thread_pool::ThreadPool, Command, Error, KvsEngine, Response, Result};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
@@ -7,14 +7,14 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct KvsServer {
+pub struct KvsServer<E: KvsEngine> {
     logger: Logger,
-    engine: KvStore,
+    engine: E,
     addr: SocketAddr,
 }
 
-impl KvsServer {
-    pub fn new(logger: Logger, engine: KvStore, addr: SocketAddr) -> Result<Self> {
+impl<E: KvsEngine> KvsServer<E> {
+    pub fn new(logger: Logger, engine: E, addr: SocketAddr) -> Result<Self> {
         Ok(KvsServer {
             logger,
             engine,
@@ -24,7 +24,7 @@ impl KvsServer {
 
     pub fn run(&mut self) -> Result<()> {
         let listener = TcpListener::bind(&self.addr)?;
-        let thd_pool = NaiveThreadPool::new(10)?;
+        let thd_pool = SharedQueueThreadPool::new(10)?;
 
         for stream in listener.incoming() {
             let mut stream = stream?;

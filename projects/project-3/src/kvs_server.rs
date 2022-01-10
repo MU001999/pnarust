@@ -5,18 +5,14 @@ use std::{
     net::{SocketAddr, TcpListener, TcpStream},
 };
 
-pub struct KvsServer<'sv> {
+pub struct KvsServer<'sv, E: KvsEngine> {
     logger: &'sv Logger,
-    engine: &'sv mut dyn KvsEngine,
+    engine: &'sv mut E,
     addr: SocketAddr,
 }
 
-impl<'sv> KvsServer<'sv> {
-    pub fn new(
-        logger: &'sv Logger,
-        engine: &'sv mut dyn KvsEngine,
-        addr: SocketAddr,
-    ) -> Result<Self> {
+impl<'sv, E: KvsEngine> KvsServer<'sv, E> {
+    pub fn new(logger: &'sv Logger, engine: &'sv mut E, addr: SocketAddr) -> Result<Self> {
         Ok(KvsServer {
             logger,
             engine,

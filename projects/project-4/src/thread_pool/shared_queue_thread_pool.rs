@@ -1,7 +1,10 @@
 use super::ThreadPool;
-use std::{thread::{self, JoinHandle}, panic};
-use crossbeam_channel::{unbounded, Sender, Receiver};
 use crate::Result;
+use crossbeam_channel::{unbounded, Receiver, Sender};
+use std::{
+    panic,
+    thread::{self, JoinHandle},
+};
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
@@ -41,10 +44,7 @@ impl ThreadPool for SharedQueueThreadPool {
                 }
             }));
         }
-        Ok(SharedQueueThreadPool {
-            handles,
-            channel
-        })
+        Ok(SharedQueueThreadPool { handles, channel })
     }
 
     fn spawn<F>(&self, job: F)

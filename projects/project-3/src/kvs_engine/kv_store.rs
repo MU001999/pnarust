@@ -30,68 +30,59 @@ impl KvStore {
         let mut index = HashMap::new();
 
         // if no file exists, set active_nth_file 0
-        if !path_at(0).exists() {
-            let active_writer = BufWriter::new(
-                OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .open(path_at(0))?,
-            );
-            return Ok(KvStore {
-                index,
-                path,
-                active_nth_file: 0,
-                active_writer,
-            });
-        }
-
-        // scan how many kvs.data.* files in the given dir
-        let mut nfile: u64 = 0;
-        for entry in WalkDir::new(&path).min_depth(1).max_depth(1) {
-            if entry?
-                .file_name()
-                .to_string_lossy()
-                .starts_with("kvs.data.")
-            {
-                nfile += 1;
-            }
-        }
-
-        // read each kvs.data.* file
-        for i in 0..nfile {
-            let file = File::open(path_at(i))?;
-            let reader = BufReader::new(&file);
-
-            // replay each command
-            let mut pos: u64 = 0;
-            for command in reader.split(b'#') {
-                let command = command?;
-                let next_pos = pos + command.len() as u64 + 1;
-
-                let command = serde_json::from_slice(&command)?;
-                match command {
-                    Command::Set { key, .. } => {
-                        index.insert(key.clone(), (i, pos));
-                    }
-                    Command::Rm { key } => {
-                        index.remove(&key);
-                    }
-                    _ => (),
+        let active_nth_file = if !path_at(0).exists() {
+            0
+        } else {
+            // scan how many kvs.data.* files in the given dir
+            let mut nfile: u64 = 0;
+            for entry in WalkDir::new(&path).min_depth(1).max_depth(1) {
+                if entry?
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("kvs.data.")
+                {
+                    nfile += 1;
                 }
-                pos = next_pos;
             }
-        }
+
+            // read each kvs.data.* file
+            for i in 0..nfile {
+                let file = File::open(path_at(i))?;
+                let reader = BufReader::new(&file);
+
+                // replay each command
+                let mut pos: u64 = 0;
+                for command in reader.split(b'#') {
+                    let command = command?;
+                    let next_pos = pos + command.len() as u64 + 1;
+
+                    let command = serde_json::from_slice(&command)?;
+                    match command {
+                        Command::Set { key, .. } => {
+                            index.insert(key.clone(), (i, pos));
+                        }
+                        Command::Rm { key } => {
+                            index.remove(&key);
+                        }
+                        _ => (),
+                    }
+                    pos = next_pos;
+                }
+            }
+
+            nfile - 1
+        };
 
         let active_writer = BufWriter::new(
             OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open(path_at(nfile - 1))?,
+                .open(path_at(active_nth_file))?,
         );
         Ok(KvStore {
             index,
             path,
-            active_nth_file: nfile - 1,
+            active_nth_file,
             active_writer,
         })
     }

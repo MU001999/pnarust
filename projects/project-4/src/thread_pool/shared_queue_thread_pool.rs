@@ -19,8 +19,8 @@ pub struct SharedQueueThreadPool {
 }
 
 impl ThreadPool for SharedQueueThreadPool {
-    fn new(threads: u32) -> Result<Self> {
-        let mut handles = Vec::with_capacity(threads as usize);
+    fn new(threads: usize) -> Result<Self> {
+        let mut handles = Vec::with_capacity(threads);
         let channel: (Sender<Message>, Receiver<Message>) = unbounded();
         for _ in 0..threads {
             let recv = channel.1.clone();

@@ -8,7 +8,7 @@ pub use rayon_thread_pool::RayonThreadPool;
 pub use shared_queue_thread_pool::SharedQueueThreadPool;
 
 pub trait ThreadPool: Sized {
-    fn new(threads: u32) -> Result<Self>;
+    fn new(threads: usize) -> Result<Self>;
     fn spawn<F>(&self, job: F)
     where
         F: FnOnce() + Send + 'static;

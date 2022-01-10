@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
     info!(logger, "IP-PORT: {}, ENGINE: {}", addr, engine.as_str());
 
-    let thread_pool = SharedQueueThreadPool::new(10).unwrap();
+    let thread_pool = SharedQueueThreadPool::new(num_cpus::get()).unwrap();
     match engine {
         EngineKind::Kvs => {
             let engine = KvStore::open("db.".to_owned() + engine.as_str())?;

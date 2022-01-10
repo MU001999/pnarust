@@ -14,6 +14,7 @@ const SINGLE_FILE_SIZE: u64 = 1024 * 1024;
 struct KvStoreState {
     index: HashMap<String, (u64, u64)>,
     active_nth_file: u64,
+    active_writer: BufWriter<File>,
 }
 
 pub struct KvStore {
@@ -34,58 +35,62 @@ impl KvStore {
         let mut index = HashMap::new();
 
         // if no file exists, set active_nth_file 0
-        if !path_at(0).exists() {
-            let state = KvStoreState {
-                index,
-                active_nth_file: 0,
-            };
-            return Ok(KvStore {
-                lock: Arc::new(RwLock::new(state)),
-                path,
-            });
-        }
-
-        // scan how many kvs.data.* files in the given dir
-        let mut nfile: u64 = 0;
-        for entry in WalkDir::new(&path).min_depth(1).max_depth(1) {
-            if entry?
-                .file_name()
-                .to_string_lossy()
-                .starts_with("kvs.data.")
-            {
-                nfile += 1;
-            }
-        }
-
-        // read each kvs.data.* file
-        for i in 0..nfile {
-            let file = File::open(path_at(i))?;
-            let reader = BufReader::new(&file);
-
-            // replay each command
-            let mut pos: u64 = 0;
-            for command in reader.split(b'#') {
-                let command = command?;
-                let next_pos = pos + command.len() as u64 + 1;
-
-                let command = serde_json::from_slice(&command)?;
-                match command {
-                    Command::Set { key, .. } => {
-                        index.insert(key.clone(), (i, pos));
-                    }
-                    Command::Rm { key } => {
-                        index.remove(&key);
-                    }
-                    _ => (),
+        let active_nth_file = if !path_at(0).exists() {
+            0
+        } else {
+            // scan how many kvs.data.* files in the given dir
+            let mut nfile: u64 = 0;
+            for entry in WalkDir::new(&path).min_depth(1).max_depth(1) {
+                if entry?
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("kvs.data.")
+                {
+                    nfile += 1;
                 }
-                pos = next_pos;
             }
-        }
+
+            // read each kvs.data.* file
+            for i in 0..nfile {
+                let file = File::open(path_at(i))?;
+                let reader = BufReader::new(&file);
+
+                // replay each command
+                let mut pos: u64 = 0;
+                for command in reader.split(b'#') {
+                    let command = command?;
+                    let next_pos = pos + command.len() as u64 + 1;
+
+                    let command = serde_json::from_slice(&command)?;
+                    match command {
+                        Command::Set { key, .. } => {
+                            index.insert(key.clone(), (i, pos));
+                        }
+                        Command::Rm { key } => {
+                            index.remove(&key);
+                        }
+                        _ => (),
+                    }
+                    pos = next_pos;
+                }
+            }
+
+            nfile - 1
+        };
+
+        let active_writer = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path_at(active_nth_file))?,
+        );
 
         let state = KvStoreState {
             index,
-            active_nth_file: nfile - 1,
+            active_nth_file,
+            active_writer,
         };
+
         Ok(KvStore {
             lock: Arc::new(RwLock::new(state)),
             path,
@@ -106,7 +111,7 @@ impl KvStore {
         for (key, (n, mut pos)) in &state.index {
             if *n < state.active_nth_file {
                 let command = KvStore::read_command_from(self.path_at(*n), pos)?;
-                pos = KvStore::write_command_to(self.active_path(state), &command)?;
+                pos = KvStore::write_command_to_writer(&mut state.active_writer, &command)?;
             }
 
             new_index.insert(key.clone(), (0, pos));
@@ -119,6 +124,12 @@ impl KvStore {
 
         state.index = new_index;
         state.active_nth_file = 0;
+        state.active_writer = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(self.active_path(state))?,
+        );
 
         Ok(())
     }
@@ -127,6 +138,12 @@ impl KvStore {
         if last_pos > SINGLE_FILE_SIZE {
             // create new file if the active file is large
             state.active_nth_file += 1;
+            state.active_writer = BufWriter::new(
+                OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .open(self.active_path(state))?,
+            );
 
             if (state.index.len() as u64) < state.active_nth_file * 1024 {
                 // compact logs if active records are much less than old records
@@ -150,11 +167,6 @@ impl KvStore {
         command.pop();
 
         Ok(serde_json::from_slice(&command)?)
-    }
-
-    fn write_command_to(path: PathBuf, command: &Command) -> Result<u64> {
-        let file = OpenOptions::new().append(true).create(true).open(path)?;
-        KvStore::write_command_to_writer(&mut BufWriter::new(file), command)
     }
 
     fn write_command_to_writer(writer: &mut BufWriter<File>, command: &Command) -> Result<u64> {
@@ -202,7 +214,8 @@ impl KvsEngine for KvStore {
             key: key.clone(),
             value,
         };
-        let pos = KvStore::write_command_to(self.active_path(&state), &command)?;
+        let pos = KvStore::write_command_to_writer(&mut state.active_writer, &command)?;
+        state.active_writer.flush()?;
 
         let active_nth_file = state.active_nth_file;
         state.index.insert(key, (active_nth_file, pos));
@@ -266,7 +279,8 @@ impl KvsEngine for KvStore {
 
         if state.index.contains_key(&key) {
             let command = Command::Rm { key: key.clone() };
-            let pos = KvStore::write_command_to(self.active_path(&state), &command)?;
+            let pos = KvStore::write_command_to_writer(&mut state.active_writer, &command)?;
+            state.active_writer.flush()?;
 
             state.index.remove(&key);
             self.try_compact(pos, &mut state)?;

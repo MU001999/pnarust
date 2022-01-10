@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::process::exit;
 
+use kvs::thread_pool::{SharedQueueThreadPool, ThreadPool};
 use kvs::{KvStore, KvsServer, Result, SledKvsEngine};
 use slog::info;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
@@ -48,6 +49,27 @@ fn main() -> Result<()> {
     let Config { addr, engine } = Config::from_args();
 
     let addr: SocketAddr = addr.parse().expect("IP-PORT does not parse as an address");
+    let engine = check_engine(engine);
+
+    info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
+    info!(logger, "IP-PORT: {}, ENGINE: {}", addr, engine.as_str());
+
+    let thread_pool = SharedQueueThreadPool::new(10).unwrap();
+    match engine {
+        EngineKind::Kvs => {
+            let engine = KvStore::open("db.".to_owned() + engine.as_str())?;
+            KvsServer::new(logger, addr, engine, thread_pool)?.run()?;
+        }
+        EngineKind::Sled => {
+            let engine = SledKvsEngine::open("db.".to_owned() + engine.as_str())?;
+            KvsServer::new(logger, addr, engine, thread_pool)?.run()?;
+        }
+    };
+
+    Ok(())
+}
+
+fn check_engine(engine: Option<String>) -> EngineKind {
     let engine = engine.map(|val| match val.as_str() {
         "kvs" => EngineKind::Kvs,
         "sled" => EngineKind::Sled,
@@ -65,7 +87,7 @@ fn main() -> Result<()> {
         None
     };
 
-    let engine = match (engine, exist_engine) {
+    match (engine, exist_engine) {
         (None, None) => EngineKind::Kvs,
         (Some(en1), Some(en2)) if en1 == en2 => en1,
         (Some(_), Some(_)) => {
@@ -73,21 +95,5 @@ fn main() -> Result<()> {
             exit(1);
         }
         (en1, en2) => en1.or(en2).unwrap(),
-    };
-
-    info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
-    info!(logger, "IP-PORT: {}, ENGINE: {}", addr, engine.as_str());
-
-    match engine {
-        EngineKind::Kvs => {
-            let engine = KvStore::open("db.".to_owned() + engine.as_str())?;
-            KvsServer::new(logger, engine, addr)?.run()?;
-        }
-        EngineKind::Sled => {
-            let engine = SledKvsEngine::open("db.".to_owned() + engine.as_str())?;
-            KvsServer::new(logger, engine, addr)?.run()?;
-        }
-    };
-
-    Ok(())
+    }
 }

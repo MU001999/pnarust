@@ -14,6 +14,6 @@ impl ThreadPool for NaiveThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
-        std::thread::spawn(move || job());
+        std::thread::spawn(job);
     }
 }

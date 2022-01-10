@@ -1,10 +1,10 @@
-use crate::{Command, Error, KvStore, KvsEngine, Response, Result, thread_pool::ThreadPool};
+use crate::thread_pool::NaiveThreadPool;
+use crate::{thread_pool::ThreadPool, Command, Error, KvStore, KvsEngine, Response, Result};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
 };
-use crate::thread_pool::NaiveThreadPool;
 
 #[derive(Clone)]
 pub struct KvsServer {

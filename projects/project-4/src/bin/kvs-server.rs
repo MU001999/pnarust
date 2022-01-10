@@ -81,12 +81,12 @@ fn main() -> Result<()> {
     match engine {
         EngineKind::Kvs => {
             let engine = KvStore::open("db.".to_owned() + engine.as_str())?;
-            KvsServer::new(&logger, engine, addr)?.run()?;
+            KvsServer::new(logger, engine, addr)?.run()?;
         }
         EngineKind::Sled => {
             todo!()
             // let mut engine = SledKvsEngine::open("db.".to_owned() + engine.as_str())?;
-            // KvsServer::new(&logger, engine, addr)?.run()?;
+            // KvsServer::new(logger, engine, addr)?.run()?;
         }
     };
 

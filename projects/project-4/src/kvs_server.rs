@@ -1,18 +1,20 @@
-use crate::{Command, Error, KvStore, KvsEngine, Response, Result};
+use crate::{Command, Error, KvStore, KvsEngine, Response, Result, thread_pool::ThreadPool};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
 };
+use crate::thread_pool::NaiveThreadPool;
 
-pub struct KvsServer<'sv> {
-    logger: &'sv Logger,
+#[derive(Clone)]
+pub struct KvsServer {
+    logger: Logger,
     engine: KvStore,
     addr: SocketAddr,
 }
 
-impl<'sv> KvsServer<'sv> {
-    pub fn new(logger: &'sv Logger, engine: KvStore, addr: SocketAddr) -> Result<Self> {
+impl KvsServer {
+    pub fn new(logger: Logger, engine: KvStore, addr: SocketAddr) -> Result<Self> {
         Ok(KvsServer {
             logger,
             engine,
@@ -22,22 +24,29 @@ impl<'sv> KvsServer<'sv> {
 
     pub fn run(&mut self) -> Result<()> {
         let listener = TcpListener::bind(&self.addr)?;
+        let thd_pool = NaiveThreadPool::new(10)?;
 
         for stream in listener.incoming() {
-            let stream = stream?;
+            let mut stream = stream?;
             info!(
                 self.logger,
                 "Accept connection from: {:?}",
                 stream.peer_addr()
             );
-            self.handle_connection(stream)?;
+
+            let mut server = self.clone();
+            thd_pool.spawn(move || {
+                let command = server.read_command(&stream).unwrap();
+                let response = server.process_command(command).unwrap();
+                server.respond(&mut stream, response).unwrap();
+            });
         }
 
         Ok(())
     }
 
-    fn handle_connection(&mut self, mut stream: TcpStream) -> Result<()> {
-        let mut reader = BufReader::new(&stream);
+    fn read_command(&self, stream: &TcpStream) -> Result<Command> {
+        let mut reader = BufReader::new(stream);
 
         let mut buffer = [0; 1024];
         let len = reader.read(&mut buffer)?;
@@ -48,7 +57,11 @@ impl<'sv> KvsServer<'sv> {
         let command = crate::de::from_str(request)?;
         info!(self.logger, "Received command: {:?}", command);
 
-        let response = match command {
+        Ok(command)
+    }
+
+    fn process_command(&mut self, command: Command) -> Result<String> {
+        Ok(match command {
             Command::Set { key, value } => {
                 self.engine.set(key.clone(), value.clone())?;
                 info!(
@@ -73,11 +86,12 @@ impl<'sv> KvsServer<'sv> {
                 }
                 Err(e) => return Err(e),
             },
-        };
+        })
+    }
 
+    fn respond(&self, stream: &mut TcpStream, response: String) -> Result<()> {
         stream.write_all(response.as_bytes())?;
         info!(self.logger, "Response: {:?}", response);
-
         Ok(())
     }
 }

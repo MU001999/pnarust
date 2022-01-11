@@ -297,8 +297,8 @@ impl KvsEngine for KvStore {
                 self.try_compact(pos, &mut state)?;
 
                 Ok(())
-            },
-            None => Err(Error::KeyNotFound)
+            }
+            None => Err(Error::KeyNotFound),
         }
     }
 }

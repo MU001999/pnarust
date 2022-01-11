@@ -15,6 +15,7 @@ struct KvStoreState {
     index: HashMap<String, (u64, u64)>,
     active_nth_file: u64,
     active_writer: BufWriter<File>,
+    unused: usize,
 }
 
 pub struct KvStore {
@@ -33,6 +34,7 @@ impl KvStore {
 
         // rebuild the in-memory index
         let mut index = HashMap::new();
+        let mut unused = 0;
 
         // if no file exists, set active_nth_file 0
         let active_nth_file = if !path_at(0).exists() {
@@ -64,10 +66,13 @@ impl KvStore {
                     let command = serde_json::from_slice(&command)?;
                     match command {
                         Command::Set { key, .. } => {
-                            index.insert(key.clone(), (i, pos));
+                            if index.insert(key.clone(), (i, pos)).is_some() {
+                                unused += 1;
+                            }
                         }
                         Command::Rm { key } => {
                             index.remove(&key);
+                            unused += 1;
                         }
                         _ => (),
                     }
@@ -89,6 +94,7 @@ impl KvStore {
             index,
             active_nth_file,
             active_writer,
+            unused,
         };
 
         Ok(KvStore {
@@ -130,6 +136,7 @@ impl KvStore {
                 .append(true)
                 .open(self.active_path(state))?,
         );
+        state.unused = 0;
 
         Ok(())
     }
@@ -145,7 +152,7 @@ impl KvStore {
                     .open(self.active_path(state))?,
             );
 
-            if (state.index.len() as u64) < state.active_nth_file * 1024 {
+            if state.unused > 1024 {
                 // compact logs if active records are much less than old records
                 self.compact(state)?;
             }
@@ -218,7 +225,10 @@ impl KvsEngine for KvStore {
         state.active_writer.flush()?;
 
         let active_nth_file = state.active_nth_file;
-        state.index.insert(key, (active_nth_file, pos));
+        if state.index.insert(key, (active_nth_file, pos)).is_some() {
+            state.unused += 1;
+        }
+
         self.try_compact(pos, &mut state)?;
 
         Ok(())
@@ -277,17 +287,18 @@ impl KvsEngine for KvStore {
     fn remove(&self, key: String) -> Result<()> {
         let mut state = self.lock.write().unwrap();
 
-        if state.index.contains_key(&key) {
-            let command = Command::Rm { key: key.clone() };
-            let pos = KvStore::write_command_to_writer(&mut state.active_writer, &command)?;
-            state.active_writer.flush()?;
+        match state.index.remove(&key) {
+            Some(_) => {
+                let command = Command::Rm { key: key.clone() };
+                let pos = KvStore::write_command_to_writer(&mut state.active_writer, &command)?;
+                state.active_writer.flush()?;
 
-            state.index.remove(&key);
-            self.try_compact(pos, &mut state)?;
+                state.unused += 1;
+                self.try_compact(pos, &mut state)?;
 
-            Ok(())
-        } else {
-            Err(Error::KeyNotFound)
+                Ok(())
+            },
+            None => Err(Error::KeyNotFound)
         }
     }
 }

@@ -35,6 +35,8 @@ impl KvStore {
 
         // if no file exists, set active_nth_file 0
         let active_nth_file = if !path_at(0).exists() {
+            File::create(path_at(0))?;
+            log_readers.push(BufReader::new(File::open(path_at(0))?));
             0
         } else {
             // scan how many kvs.data.* files in the given dir
@@ -84,7 +86,6 @@ impl KvStore {
 
         let active_writer = BufWriter::new(
             OpenOptions::new()
-                .create(true)
                 .append(true)
                 .open(path_at(active_nth_file))?,
         );
@@ -112,12 +113,14 @@ impl KvStore {
         let mut new_index = HashMap::new();
         for (key, (n, mut pos)) in &self.index {
             if *n < self.active_nth_file {
-                let command = self.read_command(*n, pos)?;
-                pos = self.write_command(&command)?;
+                let reader = &mut self.log_readers[*n as usize];
+                let command = KvStore::read_command_from(reader, pos)?;
+                pos = KvStore::write_command_to(&mut self.active_writer, &command)?;
             }
 
             new_index.insert(key.clone(), (0, pos));
         }
+        self.active_writer.flush()?;
 
         self.log_readers.clear();
         for i in 0..self.active_nth_file {
@@ -125,14 +128,15 @@ impl KvStore {
         }
         fs::rename(self.active_path(), self.path_at(0))?;
 
+        self.active_nth_file = 0;
         self.index = new_index;
         self.log_readers.push(BufReader::new(File::open(self.active_path())?));
-        self.active_nth_file = 0;
         self.active_writer = BufWriter::new(
             OpenOptions::new()
                 .append(true)
                 .open(self.active_path())?,
         );
+        self.unused = 0;
 
         Ok(())
     }
@@ -150,7 +154,7 @@ impl KvStore {
             );
             self.log_readers.push(BufReader::new(File::open(self.active_path())?));
 
-            if self.unused < 1024 {
+            if self.unused > 1024 {
                 // compact logs if active records are much less than old records
                 self.compact()?;
             }
@@ -160,6 +164,10 @@ impl KvStore {
 
     fn read_command(&mut self, nfile: u64, pos: u64) -> Result<Command> {
         let reader = &mut self.log_readers[nfile as usize];
+        KvStore::read_command_from(reader, pos)
+    }
+
+    fn read_command_from(reader: &mut BufReader<File>, pos: u64) -> Result<Command> {
         reader.seek(SeekFrom::Start(pos))?;
 
         let mut command = Vec::new();
@@ -170,11 +178,15 @@ impl KvStore {
     }
 
     fn write_command(&mut self, command: &Command) -> Result<u64> {
-        self.active_writer.seek(SeekFrom::End(0))?;
-        let pos = self.active_writer.stream_position()?;
+        KvStore::write_command_to(&mut self.active_writer, command)
+    }
 
-        serde_json::to_writer(&mut self.active_writer, command)?;
-        self.active_writer.write_all(b"#")?;
+    fn write_command_to(writer: &mut BufWriter<File>, command: &Command) -> Result<u64> {
+        writer.seek(SeekFrom::End(0))?;
+        let pos = writer.stream_position()?;
+
+        serde_json::to_writer(&mut *writer, command)?;
+        writer.write_all(b"#")?;
 
         Ok(pos)
     }

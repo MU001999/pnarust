@@ -22,7 +22,7 @@ fn main() -> Result<()> {
     match config.cmd {
         Command::Set { key, value } => {
             kvstore.set(key, value)?;
-            return Ok(());
+            Ok(())
         }
         Command::Get { key } => {
             if let Some(value) = kvstore.get(key)? {
@@ -30,14 +30,14 @@ fn main() -> Result<()> {
             } else {
                 println!("Key not found");
             }
-            return Ok(());
+            Ok(())
         }
         Command::Rm { key } => {
             if let Err(err) = kvstore.remove(key) {
                 println!("{}", err);
                 exit(1);
             }
-            return Ok(());
+            Ok(())
         }
     }
 }

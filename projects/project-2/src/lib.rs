@@ -29,6 +29,7 @@ pub struct KvStore {
     index: HashMap<String, (u64, u64)>,
     path: PathBuf,
     active_nth_file: u64,
+    unused: usize,
 }
 
 impl KvStore {
@@ -54,6 +55,10 @@ impl KvStore {
             value,
         };
         let pos = KvStore::write_command_to(self.active_path(), &command)?;
+
+        if self.index.contains_key(&key) {
+            self.unused += 1;
+        }
 
         self.index.insert(key, (self.active_nth_file, pos));
         self.try_compact(pos)?;
@@ -135,6 +140,7 @@ impl KvStore {
                 index,
                 path,
                 active_nth_file: 0,
+                unused: 0,
             });
         }
 
@@ -149,6 +155,7 @@ impl KvStore {
                 nfile += 1;
             }
         }
+        let mut unused = 0;
 
         // read each kvs.data.* file
         for i in 0..nfile {
@@ -164,10 +171,14 @@ impl KvStore {
                 let command = serde_json::from_slice(&command)?;
                 match command {
                     Command::Set { key, .. } => {
+                        if index.contains_key(&key) {
+                            unused += 1;
+                        }
                         index.insert(key.clone(), (i, pos));
                     }
                     Command::Rm { key } => {
                         index.remove(&key);
+                        unused += 1;
                     }
                     _ => (),
                 }
@@ -179,6 +190,7 @@ impl KvStore {
             index,
             path,
             active_nth_file: nfile - 1,
+            unused,
         })
     }
 }
@@ -229,7 +241,7 @@ impl KvStore {
             // create new file if the active file is large
             self.active_nth_file += 1;
 
-            if (self.index.len() as u64) < self.active_nth_file * 1024 {
+            if self.unused > 1024 {
                 // compact logs if active records are much less than old records
                 self.compact()?;
             }
@@ -259,7 +271,7 @@ impl KvStore {
         let pos = writer.stream_position()?;
 
         serde_json::to_writer(&mut *writer, command)?;
-        writer.write(b"#")?;
+        writer.write_all(b"#")?;
 
         Ok(pos)
     }

@@ -121,9 +121,7 @@ impl KvStore {
                 let command = Command::Rm { key: key.clone() };
                 let pos = KvStore::write_command_to(self.active_path(), &command)?;
 
-                self.index.remove(&key);
                 self.unused += 1;
-
                 self.try_compact(pos)?;
 
                 Ok(())

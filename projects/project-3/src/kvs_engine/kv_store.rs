@@ -13,8 +13,10 @@ const SINGLE_FILE_SIZE: u64 = 1024 * 1024;
 pub struct KvStore {
     index: HashMap<String, (u64, u64)>,
     path: PathBuf,
+    log_readers: Vec<BufReader<File>>,
     active_nth_file: u64,
     active_writer: BufWriter<File>,
+    unused: usize,
 }
 
 impl KvStore {
@@ -28,6 +30,8 @@ impl KvStore {
 
         // rebuild the in-memory index
         let mut index = HashMap::new();
+        let mut log_readers = Vec::new();
+        let mut unused = 0;
 
         // if no file exists, set active_nth_file 0
         let active_nth_file = if !path_at(0).exists() {
@@ -59,15 +63,20 @@ impl KvStore {
                     let command = serde_json::from_slice(&command)?;
                     match command {
                         Command::Set { key, .. } => {
-                            index.insert(key.clone(), (i, pos));
+                            if index.insert(key.clone(), (i, pos)).is_some() {
+                                unused += 1;
+                            };
                         }
                         Command::Rm { key } => {
                             index.remove(&key);
+                            unused += 1;
                         }
                         _ => (),
                     }
                     pos = next_pos;
                 }
+
+                log_readers.push(BufReader::new(file));
             }
 
             nfile - 1
@@ -79,11 +88,14 @@ impl KvStore {
                 .append(true)
                 .open(path_at(active_nth_file))?,
         );
+
         Ok(KvStore {
             index,
             path,
+            log_readers,
             active_nth_file,
             active_writer,
+            unused,
         })
     }
 
@@ -100,23 +112,24 @@ impl KvStore {
         let mut new_index = HashMap::new();
         for (key, (n, mut pos)) in &self.index {
             if *n < self.active_nth_file {
-                let command = KvStore::read_command_from(self.path_at(*n), pos)?;
-                pos = KvStore::write_command_to_writer(&mut self.active_writer, &command)?;
+                let command = self.read_command(*n, pos)?;
+                pos = self.write_command(&command)?;
             }
 
             new_index.insert(key.clone(), (0, pos));
         }
 
+        self.log_readers.clear();
         for i in 0..self.active_nth_file {
             fs::remove_file(self.path_at(i))?;
         }
         fs::rename(self.active_path(), self.path_at(0))?;
 
         self.index = new_index;
+        self.log_readers.push(BufReader::new(File::open(self.active_path())?));
         self.active_nth_file = 0;
         self.active_writer = BufWriter::new(
             OpenOptions::new()
-                .create(true)
                 .append(true)
                 .open(self.active_path())?,
         );
@@ -135,8 +148,9 @@ impl KvStore {
                     .write(true)
                     .open(self.active_path())?,
             );
+            self.log_readers.push(BufReader::new(File::open(self.active_path())?));
 
-            if (self.index.len() as u64) < self.active_nth_file * 1024 {
+            if self.unused < 1024 {
                 // compact logs if active records are much less than old records
                 self.compact()?;
             }
@@ -144,13 +158,8 @@ impl KvStore {
         Ok(())
     }
 
-    fn read_command_from(path: PathBuf, pos: u64) -> Result<Command> {
-        let file = File::open(path)?;
-        let mut reader = BufReader::new(file);
-        KvStore::read_command_from_reader(&mut reader, pos)
-    }
-
-    fn read_command_from_reader(reader: &mut BufReader<File>, pos: u64) -> Result<Command> {
+    fn read_command(&mut self, nfile: u64, pos: u64) -> Result<Command> {
+        let reader = &mut self.log_readers[nfile as usize];
         reader.seek(SeekFrom::Start(pos))?;
 
         let mut command = Vec::new();
@@ -160,12 +169,12 @@ impl KvStore {
         Ok(serde_json::from_slice(&command)?)
     }
 
-    fn write_command_to_writer(writer: &mut BufWriter<File>, command: &Command) -> Result<u64> {
-        writer.seek(SeekFrom::End(0))?;
-        let pos = writer.stream_position()?;
+    fn write_command(&mut self, command: &Command) -> Result<u64> {
+        self.active_writer.seek(SeekFrom::End(0))?;
+        let pos = self.active_writer.stream_position()?;
 
-        serde_json::to_writer(&mut *writer, command)?;
-        writer.write_all(b"#")?;
+        serde_json::to_writer(&mut self.active_writer, command)?;
+        self.active_writer.write_all(b"#")?;
 
         Ok(pos)
     }
@@ -194,10 +203,12 @@ impl KvsEngine for KvStore {
             key: key.clone(),
             value,
         };
-        let pos = KvStore::write_command_to_writer(&mut self.active_writer, &command)?;
+        let pos = self.write_command(&command)?;
         self.active_writer.flush()?;
 
-        self.index.insert(key, (self.active_nth_file, pos));
+        if self.index.insert(key, (self.active_nth_file, pos)).is_some() {
+            self.unused += 1;
+        };
         self.try_compact(pos)?;
 
         Ok(())
@@ -224,7 +235,7 @@ impl KvsEngine for KvStore {
     /// ```
     fn get(&mut self, key: String) -> Result<Option<String>> {
         if let Some(&(n, pos)) = self.index.get(&key) {
-            match KvStore::read_command_from(self.path_at(n), pos)? {
+            match self.read_command(n, pos)? {
                 Command::Set { key: _, value } => Ok(Some(value)),
                 _ => Err(Error::ErrorLogMeet),
             }
@@ -253,17 +264,17 @@ impl KvsEngine for KvStore {
     /// # }
     /// ```
     fn remove(&mut self, key: String) -> Result<()> {
-        if self.index.contains_key(&key) {
-            let command = Command::Rm { key: key.clone() };
-            let pos = KvStore::write_command_to_writer(&mut self.active_writer, &command)?;
-            self.active_writer.flush()?;
+        match self.index.remove(&key) {
+            Some(_) => {
+                let pos = self.write_command(&Command::Rm { key: key.clone() })?;
+                self.active_writer.flush()?;
 
-            self.index.remove(&key);
-            self.try_compact(pos)?;
+                self.unused += 1;
+                self.try_compact(pos)?;
 
-            Ok(())
-        } else {
-            Err(Error::KeyNotFound)
+                Ok(())
+            },
+            None => Err(Error::KeyNotFound)
         }
     }
 }

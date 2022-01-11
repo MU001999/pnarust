@@ -233,6 +233,7 @@ impl KvStore {
 
         self.active_nth_file = 0;
         self.index = new_index;
+        self.unused = 0;
 
         Ok(())
     }

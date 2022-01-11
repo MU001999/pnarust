@@ -130,12 +130,10 @@ impl KvStore {
 
         self.active_nth_file = 0;
         self.index = new_index;
-        self.log_readers.push(BufReader::new(File::open(self.active_path())?));
-        self.active_writer = BufWriter::new(
-            OpenOptions::new()
-                .append(true)
-                .open(self.active_path())?,
-        );
+        self.log_readers
+            .push(BufReader::new(File::open(self.active_path())?));
+        self.active_writer =
+            BufWriter::new(OpenOptions::new().append(true).open(self.active_path())?);
         self.unused = 0;
 
         Ok(())
@@ -152,7 +150,8 @@ impl KvStore {
                     .write(true)
                     .open(self.active_path())?,
             );
-            self.log_readers.push(BufReader::new(File::open(self.active_path())?));
+            self.log_readers
+                .push(BufReader::new(File::open(self.active_path())?));
 
             if self.unused > 1024 {
                 // compact logs if active records are much less than old records
@@ -218,7 +217,11 @@ impl KvsEngine for KvStore {
         let pos = self.write_command(&command)?;
         self.active_writer.flush()?;
 
-        if self.index.insert(key, (self.active_nth_file, pos)).is_some() {
+        if self
+            .index
+            .insert(key, (self.active_nth_file, pos))
+            .is_some()
+        {
             self.unused += 1;
         };
         self.try_compact(pos)?;
@@ -285,8 +288,8 @@ impl KvsEngine for KvStore {
                 self.try_compact(pos)?;
 
                 Ok(())
-            },
-            None => Err(Error::KeyNotFound)
+            }
+            None => Err(Error::KeyNotFound),
         }
     }
 }

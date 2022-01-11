@@ -171,10 +171,9 @@ impl KvStore {
                 let command = serde_json::from_slice(&command)?;
                 match command {
                     Command::Set { key, .. } => {
-                        if index.contains_key(&key) {
+                        if index.insert(key.clone(), (i, pos)).is_some() {
                             unused += 1;
-                        }
-                        index.insert(key.clone(), (i, pos));
+                        };
                     }
                     Command::Rm { key } => {
                         index.remove(&key);

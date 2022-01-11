@@ -56,11 +56,13 @@ impl KvStore {
         };
         let pos = KvStore::write_command_to(self.active_path(), &command)?;
 
-        if self.index.contains_key(&key) {
+        if self
+            .index
+            .insert(key, (self.active_nth_file, pos))
+            .is_some()
+        {
             self.unused += 1;
-        }
-
-        self.index.insert(key, (self.active_nth_file, pos));
+        };
         self.try_compact(pos)?;
 
         Ok(())
@@ -114,16 +116,19 @@ impl KvStore {
     /// # }
     /// ```
     pub fn remove(&mut self, key: String) -> Result<()> {
-        if self.index.contains_key(&key) {
-            let command = Command::Rm { key: key.clone() };
-            let pos = KvStore::write_command_to(self.active_path(), &command)?;
+        match self.index.remove(&key) {
+            Some(_) => {
+                let command = Command::Rm { key: key.clone() };
+                let pos = KvStore::write_command_to(self.active_path(), &command)?;
 
-            self.index.remove(&key);
-            self.try_compact(pos)?;
+                self.index.remove(&key);
+                self.unused += 1;
 
-            Ok(())
-        } else {
-            Err(format_err!("Key not found"))
+                self.try_compact(pos)?;
+
+                Ok(())
+            }
+            None => Err(format_err!("Key not found")),
         }
     }
 

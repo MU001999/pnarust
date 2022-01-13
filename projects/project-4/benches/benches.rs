@@ -17,6 +17,16 @@ fn generate_str(min: usize, max: usize) -> String {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    let inputs = &[1, 2, 4, 8, 16];
+    c.bench_function_over_inputs("write_queued_kvstore", |b, &&num| {
+
+    }, inputs);
+
+    c.bench_function_over_inputs("read_queued_kvstore", |b, &&num| {
+
+    }, inputs);
+
+/*
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
 
     let mut db_kvs =
@@ -76,6 +86,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             }
         }
     });
+ */
 }
 
 criterion_group!(benches, criterion_benchmark);

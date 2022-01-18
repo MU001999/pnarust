@@ -15,7 +15,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         inputs.push(n * 2);
     }
 
-    const NCONN: usize = 2;
+    const NCONN: usize = 1000;
 
     c.bench_function_over_inputs(
         "write_queued_kvstore",

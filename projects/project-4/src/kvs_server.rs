@@ -6,19 +6,19 @@ use std::{
     net::{SocketAddr, TcpListener, TcpStream},
 };
 
-#[derive(Clone)]
 pub struct KvsServer<E: KvsEngine, T: ThreadPool> {
     logger: Logger,
-    addr: SocketAddr,
+    listener: TcpListener,
     engine: E,
     thread_pool: T,
 }
 
 impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
     pub fn new(logger: Logger, addr: SocketAddr, engine: E, thread_pool: T) -> Result<Self> {
+        let listener = TcpListener::bind(addr)?;
         Ok(KvsServer {
             logger,
-            addr,
+            listener,
             engine,
             thread_pool,
         })
@@ -27,10 +27,8 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
     /// Run the server with given number of conns,
     /// run without existing if conns is none.
     pub fn run(&mut self, conns: Option<usize>) -> Result<()> {
-        let listener = TcpListener::bind(&self.addr)?;
-
         let mut conns_cnt = 0;
-        for stream in listener.incoming() {
+        for stream in self.listener.incoming() {
             let mut stream = stream?;
             info!(
                 self.logger,
@@ -56,6 +54,10 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
         }
 
         Ok(())
+    }
+
+    pub fn local_addr(&self) -> SocketAddr {
+        self.listener.local_addr().unwrap()
     }
 }
 

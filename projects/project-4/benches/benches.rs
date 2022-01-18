@@ -19,11 +19,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function_over_inputs(
         "write_queued_kvstore",
         |b, &threads| {
-            let addr: SocketAddr = "127.0.0.1:4000".parse().unwrap();
+            let keys: Vec<String> = (0..NCONN).map(|n| format!("{:0>8}", n)).collect();
             b.iter_batched(
                 || {
-                    let keys: Vec<String> = (0..NCONN).map(|n| format!("{:0>8}", n)).collect();
-
                     let temp_dir =
                         TempDir::new().expect("unable to create temporary working directory");
                     let path = temp_dir.path().join("db.kvs");
@@ -32,17 +30,18 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     let engine = KvStore::open(path.clone()).unwrap();
                     let thread_pool = SharedQueueThreadPool::new(threads).unwrap();
 
+                    let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+                    let mut server = KvsServer::new(logger, addr, engine, thread_pool).unwrap();
+                    let addr = server.local_addr();
+
                     let server = std::thread::spawn(move || {
-                        KvsServer::new(logger, addr, engine, thread_pool)
-                            .unwrap()
-                            .run(Some(NCONN))
-                            .unwrap();
+                        server.run(Some(2 * NCONN)).unwrap();
                     });
                     std::thread::sleep(std::time::Duration::from_secs(1));
 
-                    (server, keys)
+                    (server, keys.clone(), addr)
                 },
-                |(server, keys)| {
+                |(server, keys, addr)| {
                     for key in keys {
                         let mut client = KvsClient::connect(addr).unwrap();
                         let resp = client
@@ -64,11 +63,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function_over_inputs(
         "read_queued_kvstore",
         |b, &threads| {
-            let addr: SocketAddr = "127.0.0.1:4000".parse().unwrap();
+            let keys: Vec<String> = (0..NCONN).map(|n| format!("{:0>8}", n)).collect();
             b.iter_batched(
                 || {
-                    let keys: Vec<String> = (0..NCONN).map(|n| format!("{:0>8}", n)).collect();
-
                     let temp_dir =
                         TempDir::new().expect("unable to create temporary working directory");
                     let path = temp_dir.path().join("db.kvs");
@@ -77,11 +74,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     let engine = KvStore::open(path.clone()).unwrap();
                     let thread_pool = SharedQueueThreadPool::new(threads).unwrap();
 
+                    let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+                    let mut server = KvsServer::new(logger, addr, engine, thread_pool).unwrap();
+                    let addr = server.local_addr();
+
                     let server = std::thread::spawn(move || {
-                        KvsServer::new(logger, addr, engine, thread_pool)
-                            .unwrap()
-                            .run(Some(2 * NCONN))
-                            .unwrap();
+                        server.run(Some(2 * NCONN)).unwrap();
                     });
                     std::thread::sleep(std::time::Duration::from_secs(1));
 
@@ -98,9 +96,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
                     let clients = SharedQueueThreadPool::new(NCONN).unwrap();
 
-                    (server, clients, keys)
+                    (server, clients, keys.clone(), addr)
                 },
-                |(server, clients, keys)| {
+                |(server, clients, keys, addr)| {
                     let (sender, receiver) = channel();
                     for key in keys {
                         let addr = addr.clone();

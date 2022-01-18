@@ -2,7 +2,6 @@ use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use kvs::{thread_pool::*, Command, KvsClient, Response};
 use kvs::{KvStore, KvsEngine, KvsServer, SledKvsEngine};
 use sloggers::null::NullLoggerBuilder;
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
 use std::net::SocketAddr;
 use std::sync::mpsc::channel;
@@ -25,15 +24,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 || {
                     let keys: Vec<String> = (0..NCONN).map(|n| format!("{:0>8}", n)).collect();
 
-                    let mut builder = TerminalLoggerBuilder::new();
-                    builder.destination(Destination::Stderr);
-                    // let builder = NullLoggerBuilder;
-
                     let temp_dir =
                         TempDir::new().expect("unable to create temporary working directory");
                     let path = temp_dir.path().join("db.kvs");
 
-                    let logger = builder.build().unwrap();
+                    let logger = NullLoggerBuilder.build().unwrap();
                     let engine = KvStore::open(path.clone()).unwrap();
                     let thread_pool = SharedQueueThreadPool::new(threads).unwrap();
 
@@ -74,13 +69,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 || {
                     let keys: Vec<String> = (0..NCONN).map(|n| format!("{:0>8}", n)).collect();
 
-                    let builder = NullLoggerBuilder;
-
                     let temp_dir =
                         TempDir::new().expect("unable to create temporary working directory");
                     let path = temp_dir.path().join("db.kvs");
 
-                    let logger = builder.build().unwrap();
+                    let logger = NullLoggerBuilder.build().unwrap();
                     let engine = KvStore::open(path.clone()).unwrap();
                     let thread_pool = SharedQueueThreadPool::new(threads).unwrap();
 

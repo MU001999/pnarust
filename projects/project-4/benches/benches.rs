@@ -31,7 +31,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             let server = std::thread::spawn(move || {
                 KvsServer::new(logger, addr, engine, thread_pool)
                     .unwrap()
-                    .run(Some(1000))
+                    .run(Some(threads))
                     .unwrap();
             });
             std::thread::sleep(std::time::Duration::from_secs(1));
@@ -72,7 +72,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             let server = std::thread::spawn(move || {
                 KvsServer::new(logger, addr, engine, thread_pool)
                     .unwrap()
-                    .run(Some(1000))
+                    .run(Some(threads))
                     .unwrap();
             });
             std::thread::sleep(std::time::Duration::from_secs(1));

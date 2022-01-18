@@ -41,9 +41,10 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
             let logger = self.logger.clone();
             let engine = self.engine.clone();
             self.thread_pool.spawn(move || {
-                let command = read_command(&logger, &stream).unwrap();
-                let response = process_command(&logger, engine, command).unwrap();
-                respond(&logger, &mut stream, response).unwrap();
+                while let Some(command) = read_command(&logger, &stream).unwrap() {
+                    let response = process_command(&logger, engine.clone(), command).unwrap();
+                    respond(&logger, &mut stream, response).unwrap();
+                }
             });
 
             if let Some(tasks) = tasks {
@@ -59,19 +60,23 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
     }
 }
 
-fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Command> {
+fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Option<Command>> {
     let mut reader = BufReader::new(stream);
 
     let mut buffer = [0; 1024];
     let len = reader.read(&mut buffer)?;
 
-    let request = std::str::from_utf8(&buffer[..len]).unwrap();
-    info!(logger, "Received data: {:?}", request);
+    if len != 0 {
+        let request = std::str::from_utf8(&buffer[..len]).unwrap();
+        info!(logger, "Received data: {:?}", request);
 
-    let command = crate::de::from_str(request)?;
-    info!(logger, "Received command: {:?}", command);
+        let command = crate::de::from_str(request)?;
+        info!(logger, "Received command: {:?}", command);
 
-    Ok(command)
+        Ok(Some(command))
+    } else {
+        Ok(None)
+    }
 }
 
 fn process_command(logger: &Logger, engine: impl KvsEngine, command: Command) -> Result<String> {

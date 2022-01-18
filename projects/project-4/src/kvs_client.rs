@@ -19,9 +19,9 @@ impl KvsClient {
         let buffer = crate::ser::to_string(&command)?;
         self.stream.write_all(buffer.as_bytes())?;
 
-        let mut response = String::new();
-        self.stream.read_to_string(&mut response)?;
+        let mut buffer = [0; 1024];
+        let len = self.stream.read(&mut buffer)?;
 
-        crate::de::from_str(&response)
+        crate::de::from_str(std::str::from_utf8(&buffer[..len]).unwrap())
     }
 }

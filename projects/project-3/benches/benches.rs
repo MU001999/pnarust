@@ -28,9 +28,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     TempDir::new().expect("unable to create temporary working directory");
                 let db = KvStore::open(temp_dir.path().join("db.kvs")).unwrap();
 
-                (db, key_vals.clone())
+                (db, key_vals.clone(), temp_dir)
             },
-            |(mut db, key_vals)| {
+            |(mut db, key_vals, _)| {
                 for (key, value) in key_vals {
                     db.set(key, value).expect("unable to set");
                 }
@@ -46,9 +46,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     TempDir::new().expect("unable to create temporary working directory");
                 let db = SledKvsEngine::open(temp_dir.path().join("db.sled")).unwrap();
 
-                (db, key_vals.clone())
+                (db, key_vals.clone(), temp_dir)
             },
-            |(mut db, key_vals)| {
+            |(mut db, key_vals, _)| {
                 for (key, value) in key_vals {
                     db.set(key, value).expect("unable to set");
                 }
@@ -69,9 +69,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     db.set(key.to_owned(), value.to_owned()).expect("unable to set");
                 }
 
-                (db, key_vals.clone())
+                (db, key_vals.clone(), temp_dir)
             },
-            |(mut db, mut key_vals)| {
+            |(mut db, mut key_vals, _)| {
                 for _ in 0..10 {
                     key_vals.shuffle(&mut rng);
                     for (key, value) in &key_vals {
@@ -95,9 +95,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     db.set(key.to_owned(), value.to_owned()).expect("unable to set");
                 }
 
-                (db, key_vals.clone())
+                (db, key_vals.clone(), temp_dir)
             },
-            |(mut db, mut key_vals)| {
+            |(mut db, mut key_vals, _)| {
                 for _ in 0..10 {
                     key_vals.shuffle(&mut rng);
                     for (key, value) in &key_vals {

@@ -25,7 +25,7 @@ pub enum Command {
     Rm { key: String },
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum Response {
     SuccessSet(),
     SuccessGet(Option<String>),

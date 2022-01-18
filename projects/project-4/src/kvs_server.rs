@@ -24,9 +24,12 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
         })
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    /// Run the server with given number of tasks,
+    /// run without existing if tasks is none.
+    pub fn run(&mut self, tasks: Option<usize>) -> Result<()> {
         let listener = TcpListener::bind(&self.addr)?;
 
+        let mut tasks_cnt = 0;
         for stream in listener.incoming() {
             let mut stream = stream?;
             info!(
@@ -42,6 +45,14 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
                 let response = process_command(&logger, engine, command).unwrap();
                 respond(&logger, &mut stream, response).unwrap();
             });
+
+            if let Some(tasks) = tasks {
+                if tasks_cnt >= tasks {
+                    break;
+                } else {
+                    tasks_cnt += 1;
+                }
+            }
         }
 
         Ok(())

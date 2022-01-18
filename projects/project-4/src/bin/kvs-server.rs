@@ -58,11 +58,11 @@ fn main() -> Result<()> {
     match engine {
         EngineKind::Kvs => {
             let engine = KvStore::open("db.".to_owned() + engine.as_str())?;
-            KvsServer::new(logger, addr, engine, thread_pool)?.run()?;
+            KvsServer::new(logger, addr, engine, thread_pool)?.run(None)?;
         }
         EngineKind::Sled => {
             let engine = SledKvsEngine::open("db.".to_owned() + engine.as_str())?;
-            KvsServer::new(logger, addr, engine, thread_pool)?.run()?;
+            KvsServer::new(logger, addr, engine, thread_pool)?.run(None)?;
         }
     };
 

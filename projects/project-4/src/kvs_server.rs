@@ -3,7 +3,7 @@ use crate::{Command, Error, KvsEngine, Response, Result};
 use slog::{info, Logger};
 use std::{
     io::{BufReader, Read, Write},
-    net::{SocketAddr, TcpListener, TcpStream},
+    net::{Shutdown, SocketAddr, TcpListener, TcpStream},
 };
 
 pub struct KvsServer<E: KvsEngine, T: ThreadPool> {
@@ -43,6 +43,7 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
                     let response = process_command(&logger, engine.clone(), command).unwrap();
                     respond(&logger, &mut stream, response).unwrap();
                 }
+                stream.shutdown(Shutdown::Both).unwrap();
             });
 
             conns_cnt += 1;

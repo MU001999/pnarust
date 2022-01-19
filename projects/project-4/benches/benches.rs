@@ -8,6 +8,7 @@ use std::net::SocketAddr;
 use std::sync::mpsc::channel;
 use tempfile::TempDir;
 
+// TODO: too much ports with TIME_WAIT
 pub fn criterion_benchmark(c: &mut Criterion) {
     let ncpus = num_cpus::get();
     let mut inputs = vec![1];
@@ -40,22 +41,26 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     let addr = server.local_addr();
 
                     let server = std::thread::spawn(move || {
-                        server.run(Some(NCONN)).unwrap();
+                        server.run(Some(1)).unwrap();
                     });
                     std::thread::sleep(std::time::Duration::from_secs(1));
 
                     (server, keys.clone(), addr)
                 },
                 |(server, keys, addr)| {
-                    for key in keys {
+                    {
+                        // drop client
                         let mut client = KvsClient::connect(addr).unwrap();
-                        let resp = client
-                            .send(Command::Set {
-                                key,
-                                value: String::from("value"),
-                            })
-                            .unwrap();
-                        assert_eq!(resp, Response::SuccessSet());
+                        for key in keys {
+                            let resp = client
+                                .send(Command::Set {
+                                    key,
+                                    value: String::from("value"),
+                                })
+                                .unwrap();
+                            assert_eq!(resp, Response::SuccessSet());
+                        }
+                        client.shutdown().unwrap();
                     }
                     server.join().unwrap();
                 },
@@ -84,23 +89,26 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     let addr = server.local_addr();
 
                     let server = std::thread::spawn(move || {
-                        server.run(Some(2 * NCONN)).unwrap();
+                        server.run(Some(NCONN + 1)).unwrap();
                     });
                     std::thread::sleep(std::time::Duration::from_secs(1));
 
-                    for key in &keys {
+                    {
+                        // drop the set_client
                         let mut client = KvsClient::connect(addr).unwrap();
-                        let resp = client
-                            .send(Command::Set {
-                                key: key.clone(),
-                                value: String::from("value"),
-                            })
-                            .unwrap();
-                        assert_eq!(resp, Response::SuccessSet());
+                        for key in &keys {
+                            let resp = client
+                                .send(Command::Set {
+                                    key: key.clone(),
+                                    value: String::from("value"),
+                                })
+                                .unwrap();
+                            assert_eq!(resp, Response::SuccessSet());
+                        }
+                        client.shutdown().unwrap();
                     }
 
                     let clients = SharedQueueThreadPool::new(NCONN).unwrap();
-
                     (server, clients, keys.clone(), addr)
                 },
                 |(server, clients, keys, addr)| {
@@ -112,7 +120,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                             let mut client = KvsClient::connect(addr).unwrap();
                             let resp = client.send(Command::Get { key }).unwrap();
                             assert_eq!(resp, Response::SuccessGet(Some(String::from("value"))));
-                            sender.send(1).unwrap();
+                            client.shutdown().unwrap();
+                            while sender.send(1).is_err() {}
                         })
                     }
 

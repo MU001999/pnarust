@@ -2,12 +2,12 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::process::exit;
 
+use clap::{ArgEnum, Parser};
 use kvs::thread_pool::{SharedQueueThreadPool, ThreadPool};
 use kvs::{KvStore, KvsServer, Result, SledKvsEngine};
 use slog::info;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
-use clap::{Parser, ArgEnum};
 
 #[derive(Parser)]
 #[clap(name = "kvs-server",
@@ -21,7 +21,7 @@ struct Config {
         value_name = "IP-PORT",
         default_value = "127.0.0.1:4000"
     )]
-    addr: String,
+    addr: SocketAddr,
     #[clap(arg_enum, long = "engine", value_name = "ENGINE-NAME")]
     engine: Option<EngineKind>,
 }
@@ -47,8 +47,6 @@ fn main() -> Result<()> {
     let logger = builder.build()?;
 
     let Config { addr, engine } = Config::parse();
-
-    let addr: SocketAddr = addr.parse().expect("IP-PORT does not parse as an address");
     let engine = check_engine(engine);
 
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));

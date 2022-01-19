@@ -1,7 +1,7 @@
+use clap::Parser;
 use kvs::{Command, KvsClient, Response, Result};
 use std::net::SocketAddr;
 use std::process::exit;
-use clap::Parser;
 
 #[derive(Parser)]
 #[clap(name = "kvs-client",
@@ -18,7 +18,7 @@ pub enum Config {
             value_name = "IP-PORT",
             default_value = "127.0.0.1:4000"
         )]
-        addr: String,
+        addr: SocketAddr,
     },
     Get {
         key: String,
@@ -27,7 +27,7 @@ pub enum Config {
             value_name = "IP-PORT",
             default_value = "127.0.0.1:4000"
         )]
-        addr: String,
+        addr: SocketAddr,
     },
     Rm {
         key: String,
@@ -36,7 +36,7 @@ pub enum Config {
             value_name = "IP-PORT",
             default_value = "127.0.0.1:4000"
         )]
-        addr: String,
+        addr: SocketAddr,
     },
 }
 
@@ -49,27 +49,23 @@ impl Config {
         }
     }
 
-    fn addr(&self) -> &str {
+    fn addr(&self) -> &SocketAddr {
         match self {
             Config::Set {
                 key: _,
                 value: _,
                 addr,
-            } => addr.as_str(),
-            Config::Get { key: _, addr } => addr.as_str(),
-            Config::Rm { key: _, addr } => addr.as_str(),
+            } => addr,
+            Config::Get { key: _, addr } => addr,
+            Config::Rm { key: _, addr } => addr,
         }
     }
 }
 
 fn main() -> Result<()> {
     let config = Config::parse();
-    let addr: SocketAddr = config
-        .addr()
-        .parse()
-        .expect("IP-PORT does not parse as an address");
 
-    let mut client = KvsClient::connect(addr)?;
+    let mut client = KvsClient::connect(*config.addr())?;
     match client.send(config.into_command())? {
         Response::Fail(msg) => {
             eprintln!("{}", msg);

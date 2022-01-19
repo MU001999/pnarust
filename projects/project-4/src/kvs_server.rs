@@ -40,7 +40,7 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
             let engine = self.engine.clone();
             self.thread_pool.spawn(move || {
                 while let Some(command) = read_command(&logger, &stream).unwrap() {
-                    let response = process_command(&logger, engine.clone(), command).unwrap();
+                    let response = process_command(engine.clone(), command).unwrap();
                     respond(&logger, &mut stream, response).unwrap();
                 }
                 stream.shutdown(Shutdown::Both).unwrap();
@@ -70,8 +70,6 @@ fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Option<Command>> 
 
     if len != 0 {
         let request = std::str::from_utf8(&buffer[..len]).unwrap();
-        info!(logger, "Received data: {:?}", request);
-
         let command = crate::de::from_str(request)?;
         info!(logger, "Received command: {:?}", command);
 
@@ -81,28 +79,19 @@ fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Option<Command>> 
     }
 }
 
-fn process_command(logger: &Logger, engine: impl KvsEngine, command: Command) -> Result<String> {
+fn process_command(engine: impl KvsEngine, command: Command) -> Result<String> {
     Ok(match command {
         Command::Set { key, value } => {
-            engine.set(key.clone(), value.clone())?;
-            info!(
-                logger,
-                "Set successfully: value {:?} has been set for key {:?}", value, key
-            );
+            engine.set(key, value)?;
             crate::ser::to_string(&Response::SuccessSet())?
         }
         Command::Get { key } => {
             let value = engine.get(key)?;
-            info!(logger, "Get successfully: value {:?}", value);
             crate::ser::to_string(&Response::SuccessGet(value))?
         }
-        Command::Rm { key } => match engine.remove(key.clone()) {
-            Ok(()) => {
-                info!(logger, "Rm successfully: key {:?}", key);
-                crate::ser::to_string(&Response::SuccessRm())?
-            }
+        Command::Rm { key } => match engine.remove(key) {
+            Ok(()) => crate::ser::to_string(&Response::SuccessRm())?,
             Err(Error::KeyNotFound) => {
-                info!(logger, "Rm failed: key {:?}", key);
                 crate::ser::to_string(&Response::Fail(String::from("Key not found")))?
             }
             Err(e) => return Err(e),

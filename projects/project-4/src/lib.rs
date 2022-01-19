@@ -15,10 +15,10 @@ pub use kvs_client::KvsClient;
 pub use kvs_engine::{KvStore, KvsEngine, SledKvsEngine};
 pub use kvs_server::KvsServer;
 
-use serde::{Deserialize, Serialize};
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Parser, Serialize, Deserialize, Debug)]
+#[derive(Parser, Clone, Serialize, Deserialize, Debug)]
 pub enum Command {
     Set { key: String, value: String },
     Get { key: String },

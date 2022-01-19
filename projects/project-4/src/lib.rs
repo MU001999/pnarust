@@ -16,9 +16,9 @@ pub use kvs_engine::{KvStore, KvsEngine, SledKvsEngine};
 pub use kvs_server::KvsServer;
 
 use serde::{Deserialize, Serialize};
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(Clone, StructOpt, Serialize, Deserialize, Debug)]
+#[derive(Clone, Parser, Serialize, Deserialize, Debug)]
 pub enum Command {
     Set { key: String, value: String },
     Get { key: String },

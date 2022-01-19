@@ -7,26 +7,26 @@ use kvs::{KvStore, KvsServer, Result, SledKvsEngine};
 use slog::info;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
-use structopt::StructOpt;
+use clap::{Parser, ArgEnum};
 
-#[derive(StructOpt)]
-#[structopt(name = "kvs-server",
+#[derive(Parser)]
+#[clap(name = "kvs-server",
     version = env!("CARGO_PKG_VERSION"),
     author = env!("CARGO_PKG_AUTHORS"),
     about = env!("CARGO_PKG_DESCRIPTION")
 )]
 struct Config {
-    #[structopt(
+    #[clap(
         long = "addr",
         value_name = "IP-PORT",
         default_value = "127.0.0.1:4000"
     )]
     addr: String,
-    #[structopt(long = "engine", value_name = "ENGINE-NAME")]
-    engine: Option<String>,
+    #[clap(arg_enum, long = "engine", value_name = "ENGINE-NAME")]
+    engine: Option<EngineKind>,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(ArgEnum, Clone, PartialEq, Eq)]
 enum EngineKind {
     Kvs,
     Sled,
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     builder.destination(Destination::Stderr);
     let logger = builder.build()?;
 
-    let Config { addr, engine } = Config::from_args();
+    let Config { addr, engine } = Config::parse();
 
     let addr: SocketAddr = addr.parse().expect("IP-PORT does not parse as an address");
     let engine = check_engine(engine);
@@ -69,16 +69,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn check_engine(engine: Option<String>) -> EngineKind {
-    let engine = engine.map(|val| match val.as_str() {
-        "kvs" => EngineKind::Kvs,
-        "sled" => EngineKind::Sled,
-        _ => {
-            eprintln!("ENGINE-NAME is either 'kvs' or 'sled'");
-            exit(1);
-        }
-    });
-
+fn check_engine(engine: Option<EngineKind>) -> EngineKind {
     let exist_engine = if Path::new("db.kvs").exists() {
         Some(EngineKind::Kvs)
     } else if Path::new("db.sled").exists() {

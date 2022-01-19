@@ -1,10 +1,10 @@
 use kvs::{Command, KvsClient, Response, Result};
 use std::net::SocketAddr;
 use std::process::exit;
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(StructOpt)]
-#[structopt(name = "kvs-client",
+#[derive(Parser)]
+#[clap(name = "kvs-client",
     version = env!("CARGO_PKG_VERSION"),
     author = env!("CARGO_PKG_AUTHORS"),
     about = env!("CARGO_PKG_DESCRIPTION")
@@ -13,7 +13,7 @@ pub enum Config {
     Set {
         key: String,
         value: String,
-        #[structopt(
+        #[clap(
             long = "addr",
             value_name = "IP-PORT",
             default_value = "127.0.0.1:4000"
@@ -22,7 +22,7 @@ pub enum Config {
     },
     Get {
         key: String,
-        #[structopt(
+        #[clap(
             long = "addr",
             value_name = "IP-PORT",
             default_value = "127.0.0.1:4000"
@@ -31,7 +31,7 @@ pub enum Config {
     },
     Rm {
         key: String,
-        #[structopt(
+        #[clap(
             long = "addr",
             value_name = "IP-PORT",
             default_value = "127.0.0.1:4000"
@@ -63,7 +63,7 @@ impl Config {
 }
 
 fn main() -> Result<()> {
-    let config = Config::from_args();
+    let config = Config::parse();
     let addr: SocketAddr = config
         .addr()
         .parse()

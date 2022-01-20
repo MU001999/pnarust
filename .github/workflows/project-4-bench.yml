@@ -1,0 +1,17 @@
+name: Project 4 Benchmark
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  bench:
+    name: Bench
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: cd projects/project-4 && cargo bench

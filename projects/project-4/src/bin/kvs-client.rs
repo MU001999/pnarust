@@ -77,7 +77,6 @@ fn main() -> Result<()> {
         },
         _ => (),
     }
-    client.shutdown()?;
 
     Ok(())
 }

@@ -24,10 +24,10 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
         })
     }
 
-    /// Run the server with given number of conns,
-    /// run without existing if conns is none.
-    pub fn run(&mut self, conns: Option<usize>) -> Result<()> {
-        let mut conns_cnt = 0;
+    /// Run the server with given number of tasks,
+    /// run without existing if tasks is none.
+    pub fn run(&mut self, tasks: Option<usize>) -> Result<()> {
+        let mut tasks_cnt = 0;
         for stream in self.listener.incoming() {
             let mut stream = stream?;
             info!(
@@ -39,16 +39,14 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
             let logger = self.logger.clone();
             let engine = self.engine.clone();
             self.thread_pool.spawn(move || {
-                while let Some(command) = read_command(&logger, &stream).unwrap() {
-                    let response = process_command(engine.clone(), command).unwrap();
-                    respond(&logger, &mut stream, response).unwrap();
-                }
-                stream.shutdown(Shutdown::Both).unwrap();
+                let command = read_command(&logger, &stream).unwrap();
+                let response = process_command(engine.clone(), command).unwrap();
+                respond(&logger, &mut stream, response).unwrap();
             });
 
-            conns_cnt += 1;
-            if let Some(conns) = conns {
-                if conns_cnt >= conns {
+            tasks_cnt += 1;
+            if let Some(tasks) = tasks {
+                if tasks_cnt >= tasks {
                     break;
                 }
             }
@@ -62,21 +60,19 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
     }
 }
 
-fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Option<Command>> {
+fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Command> {
     let mut reader = BufReader::new(stream);
 
-    let mut buffer = [0; 1024];
-    let len = reader.read(&mut buffer)?;
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer)?;
 
-    if len != 0 {
-        let request = std::str::from_utf8(&buffer[..len]).unwrap();
-        let command = crate::de::from_str(request)?;
-        info!(logger, "Received command: {:?}", command);
+    stream.shutdown(Shutdown::Read)?;
 
-        Ok(Some(command))
-    } else {
-        Ok(None)
-    }
+    let request = std::str::from_utf8(&buffer).unwrap();
+    let command = crate::de::from_str(request)?;
+    info!(logger, "Received command: {:?}", command);
+
+    Ok(command)
 }
 
 fn process_command(engine: impl KvsEngine, command: Command) -> Result<String> {
@@ -101,6 +97,8 @@ fn process_command(engine: impl KvsEngine, command: Command) -> Result<String> {
 
 fn respond(logger: &Logger, stream: &mut TcpStream, response: String) -> Result<()> {
     stream.write_all(response.as_bytes())?;
+    stream.shutdown(Shutdown::Write)?;
+
     info!(logger, "Response: {:?}", response);
     Ok(())
 }

@@ -19,14 +19,13 @@ impl KvsClient {
         let buffer = crate::ser::to_string(&command)?;
         self.stream.write_all(buffer.as_bytes())?;
 
-        let mut buffer = [0; 1024];
-        let len = self.stream.read(&mut buffer)?;
+        self.stream.shutdown(Shutdown::Write)?;
 
-        crate::de::from_str(std::str::from_utf8(&buffer[..len]).unwrap())
-    }
+        let mut buffer = Vec::new();
+        self.stream.read_to_end(&mut buffer)?;
 
-    pub fn shutdown(&mut self) -> Result<()> {
-        self.stream.shutdown(Shutdown::Both)?;
-        Ok(())
+        self.stream.shutdown(Shutdown::Read)?;
+
+        crate::de::from_str(std::str::from_utf8(&buffer).unwrap())
     }
 }

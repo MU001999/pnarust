@@ -65,7 +65,6 @@ fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Command> {
 
     let mut buffer = Vec::new();
     reader.read_to_end(&mut buffer)?;
-
     stream.shutdown(Shutdown::Read)?;
 
     let request = std::str::from_utf8(&buffer).unwrap();

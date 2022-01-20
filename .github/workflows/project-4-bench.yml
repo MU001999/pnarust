@@ -3,7 +3,7 @@ name: Project 4 Benchmark
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   bench:

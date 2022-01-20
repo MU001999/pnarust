@@ -17,11 +17,11 @@ pub fn write_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads:
             let temp_dir = TempDir::new().expect("unable to create temporary working directory");
             let path = temp_dir.path().join("db.kvs");
 
-            let mut builder = TerminalLoggerBuilder::new();
-            builder.destination(Destination::Stderr);
-            let logger = builder.build().unwrap();
+            // let mut builder = TerminalLoggerBuilder::new();
+            // builder.destination(Destination::Stderr);
+            // let logger = builder.build().unwrap();
 
-            // let logger = NullLoggerBuilder.build().unwrap();
+            let logger = NullLoggerBuilder.build().unwrap();
             let engine = KvStore::open(path.clone()).unwrap();
             let thread_pool = T::new(threads).unwrap();
 
@@ -70,11 +70,11 @@ pub fn read_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: 
             let temp_dir = TempDir::new().expect("unable to create temporary working directory");
             let path = temp_dir.path().join("db.kvs");
 
-            let mut builder = TerminalLoggerBuilder::new();
-            builder.destination(Destination::Stderr);
-            let logger = builder.build().unwrap();
+            // let mut builder = TerminalLoggerBuilder::new();
+            // builder.destination(Destination::Stderr);
+            // let logger = builder.build().unwrap();
 
-            // let logger = NullLoggerBuilder.build().unwrap();
+            let logger = NullLoggerBuilder.build().unwrap();
             let engine = KvStore::open(path.clone()).unwrap();
             let thread_pool = T::new(threads).unwrap();
 

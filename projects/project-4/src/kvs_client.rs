@@ -2,7 +2,7 @@ use crate::{Command, Response, Result};
 use std::net::SocketAddr;
 use std::{
     io::{Read, Write},
-    net::{Shutdown, TcpStream},
+    net::TcpStream,
 };
 
 pub struct KvsClient {
@@ -17,12 +17,11 @@ impl KvsClient {
 
     pub fn send(&mut self, command: Command) -> Result<Response> {
         let buffer = crate::ser::to_string(&command)?;
-        self.stream.write_all(buffer.as_bytes())?;
-        self.stream.shutdown(Shutdown::Write)?;
+        self.stream
+            .write_all(format!("{}#{}", buffer.len(), buffer).as_bytes())?;
 
         let mut buffer = Vec::new();
         self.stream.read_to_end(&mut buffer)?;
-        self.stream.shutdown(Shutdown::Read)?;
 
         crate::de::from_str(std::str::from_utf8(&buffer).unwrap())
     }

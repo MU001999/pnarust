@@ -1,6 +1,7 @@
 use crate::thread_pool::*;
 use crate::{Command, Error, KvsEngine, Response, Result};
 use slog::{info, Logger};
+use std::io::BufRead;
 use std::{
     io::{BufReader, Read, Write},
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
@@ -33,7 +34,7 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
             info!(
                 self.logger,
                 "Accept connection from: {:?}",
-                stream.peer_addr()
+                stream.peer_addr()?
             );
 
             let logger = self.logger.clone();
@@ -64,10 +65,16 @@ fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Command> {
     let mut reader = BufReader::new(stream);
 
     let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer)?;
-    stream.shutdown(Shutdown::Read)?;
+    let len = reader.read_until(b'#', &mut buffer)?;
 
-    let request = std::str::from_utf8(&buffer).unwrap();
+    let len: usize = std::str::from_utf8(&buffer[0..len - 1])
+        .unwrap()
+        .parse()
+        .unwrap();
+    let mut buffer = [0; 1024];
+    reader.read_exact(&mut buffer[0..len])?;
+
+    let request = std::str::from_utf8(&buffer[0..len]).unwrap();
     let command = crate::de::from_str(request)?;
     info!(logger, "Received command: {:?}", command);
 

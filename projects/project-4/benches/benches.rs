@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BatchSize, Bencher, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, Bencher, BenchmarkId, Criterion};
 use kvs::{thread_pool::*, Command, KvsClient, Response};
 use kvs::{KvStore, KvsEngine, KvsServer, SledKvsEngine};
 use sloggers::null::NullLoggerBuilder;
@@ -10,10 +10,72 @@ use tempfile::TempDir;
 
 const NTASK: usize = 1000;
 
-pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
-    b: &mut Bencher,
-    &threads: &usize,
-) {
+pub fn criterion_write(c: &mut Criterion) {
+    let ncpus = num_cpus::get();
+    let mut inputs = vec![1];
+    for n in 1..=ncpus {
+        inputs.push(n * 2);
+    }
+
+    let mut group = c.benchmark_group("write");
+    group.sample_size(10);
+
+    for input in &inputs {
+        group.bench_with_input(
+            BenchmarkId::new("write_queued_kvstore", input),
+            input,
+            write_function::<KvStore, SharedQueueThreadPool>,
+        );
+        group.bench_with_input(
+            BenchmarkId::new("write_rayon_kvstore", input),
+            input,
+            write_function::<KvStore, RayonThreadPool>,
+        );
+        group.bench_with_input(
+            BenchmarkId::new("write_rayon_sledkvengine", input),
+            input,
+            write_function::<SledKvsEngine, RayonThreadPool>,
+        );
+    }
+}
+
+pub fn criterion_read(c: &mut Criterion) {
+    let ncpus = num_cpus::get();
+    let mut inputs = vec![1];
+    for n in 1..=ncpus {
+        inputs.push(n * 2);
+    }
+
+    let mut group = c.benchmark_group("read");
+    group.sample_size(10);
+
+    for input in &inputs {
+        group.bench_with_input(
+            BenchmarkId::new("read_queued_kvstore", input),
+            input,
+            read_function::<KvStore, SharedQueueThreadPool>,
+        );
+        group.bench_with_input(
+            BenchmarkId::new("read_rayon_kvstore", input),
+            input,
+            read_function::<KvStore, RayonThreadPool>,
+        );
+        group.bench_with_input(
+            BenchmarkId::new("read_rayon_sledkvengine", input),
+            input,
+            read_function::<SledKvsEngine, RayonThreadPool>,
+        );
+    }
+}
+
+criterion_group!(benches, criterion_write, criterion_read);
+criterion_main!(benches);
+
+fn write_function<E, T>(b: &mut Bencher, &threads: &usize)
+where
+    E: KvsEngine,
+    T: ThreadPool + Send + 'static,
+{
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
@@ -37,7 +99,7 @@ pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
             });
             std::thread::sleep(std::time::Duration::from_secs(1));
 
-            let clients = T::new(NTASK).unwrap();
+            let clients = T::new(num_cpus::get()).unwrap();
             (server, clients, keys.clone(), addr, temp_dir)
         },
         |(server, clients, keys, addr, _)| {
@@ -66,10 +128,11 @@ pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
     );
 }
 
-pub fn read_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
-    b: &mut Bencher,
-    &threads: &usize,
-) {
+fn read_function<E, T>(b: &mut Bencher, &threads: &usize)
+where
+    E: KvsEngine,
+    T: ThreadPool + Send + 'static,
+{
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
@@ -127,50 +190,3 @@ pub fn read_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
         BatchSize::PerIteration,
     );
 }
-
-pub fn criterion_benchmark(c: &mut Criterion) {
-    let ncpus = num_cpus::get();
-    let mut inputs = vec![1];
-    for n in 1..=ncpus {
-        inputs.push(n * 2);
-    }
-
-    c.bench_function_over_inputs(
-        "write_queued_kvstore",
-        write_function::<KvStore, SharedQueueThreadPool>,
-        inputs.clone(),
-    );
-
-    c.bench_function_over_inputs(
-        "read_queued_kvstore",
-        read_function::<KvStore, SharedQueueThreadPool>,
-        inputs.clone(),
-    );
-
-    c.bench_function_over_inputs(
-        "write_rayon_kvstore",
-        write_function::<KvStore, RayonThreadPool>,
-        inputs.clone(),
-    );
-
-    c.bench_function_over_inputs(
-        "read_rayon_kvstore",
-        read_function::<KvStore, RayonThreadPool>,
-        inputs.clone(),
-    );
-
-    c.bench_function_over_inputs(
-        "write_queued_kvstore",
-        write_function::<SledKvsEngine, RayonThreadPool>,
-        inputs.clone(),
-    );
-
-    c.bench_function_over_inputs(
-        "read_queued_kvstore",
-        read_function::<SledKvsEngine, RayonThreadPool>,
-        inputs.clone(),
-    );
-}
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);

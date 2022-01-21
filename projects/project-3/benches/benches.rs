@@ -16,12 +16,14 @@ fn generate_str(min: usize, max: usize) -> String {
     result
 }
 
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn criterion_write(c: &mut Criterion) {
     let key_vals: Vec<(String, String)> = (0..100)
         .map(|_| (generate_str(1, 100000), generate_str(1, 100000)))
         .collect();
 
-    c.bench_function("kvs_write", |b| {
+    let mut group = c.benchmark_group("write");
+
+    group.bench_function("kvs_write", |b| {
         b.iter_batched(
             || {
                 let temp_dir =
@@ -39,7 +41,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         );
     });
 
-    c.bench_function("sled_write", |b| {
+    group.bench_function("sled_write", |b| {
         b.iter_batched(
             || {
                 let temp_dir =
@@ -56,9 +58,17 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             BatchSize::SmallInput,
         );
     });
+}
 
+pub fn criterion_read(c: &mut Criterion) {
+    let key_vals: Vec<(String, String)> = (0..100)
+        .map(|_| (generate_str(1, 100000), generate_str(1, 100000)))
+        .collect();
     let mut rng = rand::thread_rng();
-    c.bench_function("kvs_read", |b| {
+
+    let mut group = c.benchmark_group("read");
+
+    group.bench_function("kvs_read", |b| {
         b.iter_batched(
             || {
                 let temp_dir =
@@ -66,7 +76,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 let mut db = KvStore::open(temp_dir.path().join("db.kvs")).unwrap();
 
                 for (key, value) in &key_vals {
-                    db.set(key.to_owned(), value.to_owned()).expect("unable to set");
+                    db.set(key.to_owned(), value.to_owned())
+                        .expect("unable to set");
                 }
 
                 (db, key_vals.clone(), temp_dir)
@@ -84,7 +95,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         );
     });
 
-    c.bench_function("sled_read", |b| {
+    group.bench_function("sled_read", |b| {
         b.iter_batched(
             || {
                 let temp_dir =
@@ -92,7 +103,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 let mut db = SledKvsEngine::open(temp_dir.path().join("db.sled")).unwrap();
 
                 for (key, value) in &key_vals {
-                    db.set(key.to_owned(), value.to_owned()).expect("unable to set");
+                    db.set(key.to_owned(), value.to_owned())
+                        .expect("unable to set");
                 }
 
                 (db, key_vals.clone(), temp_dir)
@@ -111,5 +123,5 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, criterion_write, criterion_read);
 criterion_main!(benches);

@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, BatchSize, Bencher, Criterion};
 use kvs::{thread_pool::*, Command, KvsClient, Response};
 use kvs::{KvStore, KvsEngine, KvsServer, SledKvsEngine};
 use sloggers::null::NullLoggerBuilder;
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
+// use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
 use std::net::SocketAddr;
 use std::sync::mpsc::channel;
@@ -10,7 +10,10 @@ use tempfile::TempDir;
 
 const NTASK: usize = 1000;
 
-pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: &usize) {
+pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
+    b: &mut Bencher,
+    &threads: &usize,
+) {
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
@@ -63,7 +66,10 @@ pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(b: &mut Benc
     );
 }
 
-pub fn read_function<E: KvsEngine, T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: &usize) {
+pub fn read_function<E: KvsEngine, T: ThreadPool + Send + 'static>(
+    b: &mut Bencher,
+    &threads: &usize,
+) {
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {

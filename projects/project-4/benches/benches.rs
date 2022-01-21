@@ -10,7 +10,7 @@ use tempfile::TempDir;
 
 const NTASK: usize = 1000;
 
-pub fn write_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: &usize) {
+pub fn write_function<E: KvsEngine, T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: &usize) {
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
@@ -22,7 +22,7 @@ pub fn write_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads:
             // let logger = builder.build().unwrap();
 
             let logger = NullLoggerBuilder.build().unwrap();
-            let engine = KvStore::open(path.clone()).unwrap();
+            let engine = E::open(path.clone()).unwrap();
             let thread_pool = T::new(threads).unwrap();
 
             let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
@@ -63,7 +63,7 @@ pub fn write_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads:
     );
 }
 
-pub fn read_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: &usize) {
+pub fn read_function<E: KvsEngine, T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: &usize) {
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
@@ -75,7 +75,7 @@ pub fn read_function<T: ThreadPool + Send + 'static>(b: &mut Bencher, &threads: 
             // let logger = builder.build().unwrap();
 
             let logger = NullLoggerBuilder.build().unwrap();
-            let engine = KvStore::open(path.clone()).unwrap();
+            let engine = E::open(path.clone()).unwrap();
             let thread_pool = T::new(threads).unwrap();
 
             let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
@@ -131,13 +131,37 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function_over_inputs(
         "write_queued_kvstore",
-        write_function::<SharedQueueThreadPool>,
+        write_function::<KvStore, SharedQueueThreadPool>,
         inputs.clone(),
     );
 
     c.bench_function_over_inputs(
         "read_queued_kvstore",
-        read_function::<SharedQueueThreadPool>,
+        read_function::<KvStore, SharedQueueThreadPool>,
+        inputs.clone(),
+    );
+
+    c.bench_function_over_inputs(
+        "write_rayon_kvstore",
+        write_function::<KvStore, RayonThreadPool>,
+        inputs.clone(),
+    );
+
+    c.bench_function_over_inputs(
+        "read_rayon_kvstore",
+        read_function::<KvStore, RayonThreadPool>,
+        inputs.clone(),
+    );
+
+    c.bench_function_over_inputs(
+        "write_queued_kvstore",
+        write_function::<SledKvsEngine, RayonThreadPool>,
+        inputs.clone(),
+    );
+
+    c.bench_function_over_inputs(
+        "read_queued_kvstore",
+        read_function::<SledKvsEngine, RayonThreadPool>,
         inputs.clone(),
     );
 }

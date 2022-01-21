@@ -197,6 +197,10 @@ impl Clone for KvStore {
 }
 
 impl KvsEngine for KvStore {
+    fn open(path: impl Into<PathBuf>) -> Result<Self> {
+        KvStore::open(path)
+    }
+
     /// Set the given value with the given key.
     ///
     /// # Examples

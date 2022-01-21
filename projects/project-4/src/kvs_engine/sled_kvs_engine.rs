@@ -16,6 +16,10 @@ impl SledKvsEngine {
 }
 
 impl KvsEngine for SledKvsEngine {
+    fn open(path: impl Into<PathBuf>) -> Result<Self> {
+        SledKvsEngine::open(path)
+    }
+
     fn set(&self, key: String, value: String) -> Result<()> {
         self.db.insert(key.as_str(), value.as_str())?;
         self.db.flush()?;

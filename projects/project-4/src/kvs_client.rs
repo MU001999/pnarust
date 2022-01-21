@@ -20,6 +20,9 @@ impl KvsClient {
         self.stream
             .write_all(format!("{}#{}", buffer.len(), buffer).as_bytes())?;
 
+        // Error with call of shutdown, may cause IOError(Os { code: 104, kind: ConnectionReset, message: "Connection reset by peer" })
+        // self.stream.shutdown(std::net::Shutdown::Write)?;
+
         let mut buffer = Vec::new();
         self.stream.read_to_end(&mut buffer)?;
 

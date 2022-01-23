@@ -301,10 +301,7 @@ impl KvsEngine for KvStore {
         }
 
         self.swap_index(new_index);
-
-        self.try_compact(pos, &mut writer)?;
-
-        Ok(())
+        self.try_compact(pos, &mut writer)
     }
 
     /// Get the corresponding value of the given key,
@@ -370,10 +367,7 @@ impl KvsEngine for KvStore {
             writer.unused += 1;
 
             self.swap_index(new_index);
-
-            self.try_compact(pos, &mut writer)?;
-
-            Ok(())
+            self.try_compact(pos, &mut writer)
         } else {
             Err(Error::KeyNotFound)
         }

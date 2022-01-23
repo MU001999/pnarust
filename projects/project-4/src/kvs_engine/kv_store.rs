@@ -129,13 +129,13 @@ impl KvStore {
     }
 
     fn get_reader(&self) -> Arc<KvStoreReader> {
-        unsafe {
-            Arc::clone(&(*self.reader.load(Ordering::Relaxed)))
-        }
+        unsafe { Arc::clone(&(*self.reader.load(Ordering::Relaxed))) }
     }
 
     fn swap_index(&self, index: HashMap<String, (u64, u64)>) {
-        let old = self.reader.swap(KvStoreReader::raw_arc(index), Ordering::Relaxed);
+        let old = self
+            .reader
+            .swap(KvStoreReader::raw_arc(index), Ordering::Relaxed);
         unsafe {
             drop(Box::from_raw(old));
         }
@@ -156,11 +156,7 @@ impl KvStore {
 
         // if kvs.data.0 is used, use active file directly
         // else write keys and values to kvs.data.0
-        let target_file = if base_file == 0 {
-            active_file
-        } else {
-            0
-        };
+        let target_file = if base_file == 0 { active_file } else { 0 };
 
         let reader = self.get_reader();
         let mut new_index = HashMap::new();
@@ -361,7 +357,7 @@ impl KvsEngine for KvStore {
             let mut new_index = reader.0.clone();
             new_index.remove(&key);
 
-            let command = Command::Rm { key};
+            let command = Command::Rm { key };
             let pos = KvStore::write_command_to_writer(&mut writer.active_writer, &command)?;
             writer.active_writer.flush()?;
             writer.unused += 1;

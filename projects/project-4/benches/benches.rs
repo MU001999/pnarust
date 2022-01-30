@@ -10,7 +10,7 @@ use tempfile::TempDir;
 // one task for one thread to set/get
 const NTASK: usize = 1000;
 
-// construct the inputs list [1, 2, 4, 6, ..., ncpus * 2]
+// constructs the inputs list [1, 2, 4, 6, ..., ncpus * 2]
 fn construct_inputs() -> Vec<usize> {
     let ncpus = num_cpus::get();
     let mut inputs = vec![1];
@@ -20,7 +20,7 @@ fn construct_inputs() -> Vec<usize> {
     inputs
 }
 
-// benchmark write operations with different threads (1, 2, 4, ..., ncpus * 2)
+// benchmarks write operations with different threads (1, 2, 4, ..., ncpus * 2)
 // sample size is set to 10 for short runtime
 pub fn criterion_write(c: &mut Criterion) {
     let inputs = construct_inputs();
@@ -49,16 +49,16 @@ pub fn criterion_write(c: &mut Criterion) {
     }
 }
 
-// benchmark read operations with different threads (1, 2, 4, ..., ncpus * 2)
+// benchmarks read operations with different threads (1, 2, 4, ..., ncpus * 2)
 // sample size is set to 10 for short runtime
 pub fn criterion_read(c: &mut Criterion) {
     let inputs = construct_inputs();
 
-    // set the sample size to 10
+    // sets the sample size to 10
     let mut group = c.benchmark_group("read");
     group.sample_size(10);
 
-    // benchmark different couples of KvsEngine and ThreadPool
+    // benchmarks different couples of KvsEngine and ThreadPool
     for input in &inputs {
         group.bench_with_input(
             BenchmarkId::new("read_queued_kvstore", input),
@@ -91,18 +91,18 @@ where
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
-            // init the temp dir and path to store,
+            // inits the temp dir and path to store,
             // where the temp_dir needs to be passed to the routine function
             let temp_dir = TempDir::new().expect("unable to create temporary working directory");
             let path = temp_dir.path().join("db.kvs");
 
-            // init the logger, engine and thread_pool for the server
+            // inits the logger, engine and thread_pool for the server
             let logger = NullLoggerBuilder.build().unwrap();
             let engine = E::open(path.clone()).unwrap();
             let thread_pool = T::new(threads).unwrap();
 
-            // init the server with an available address
-            // and get the local addr for the connections from clients later
+            // inits the server with an available address
+            // and gets the local addr for the connections from clients later
             let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
             let mut server = KvsServer::new(logger, addr, engine, thread_pool).unwrap();
             let addr = server.local_addr();
@@ -111,16 +111,16 @@ where
             let server = std::thread::spawn(move || {
                 server.run(Some(NTASK)).unwrap();
             });
-            // sleep 1s to make sure the server thread has been ready
+            // sleeps 1s to make sure the server thread has been ready
             std::thread::sleep(std::time::Duration::from_secs(1));
 
-            // init the thread_pool for clients
+            // inits the thread_pool for clients
             let clients = T::new(num_cpus::get()).unwrap();
-            // pass the temp_dir to hold the temp dir
+            // passes the temp_dir to hold the temp dir
             (server, clients, keys.clone(), addr, temp_dir)
         },
         |(server, clients, keys, addr, _)| {
-            // init the sender and receiver to make sure all tasks have been done
+            // inits the sender and receiver to make sure all tasks have been done
             let (sender, receiver) = channel();
             for key in keys.into_iter() {
                 let sender = sender.clone();
@@ -133,18 +133,18 @@ where
                             value: String::from("value"),
                         })
                         .unwrap();
-                    // assert the response is as expected
+                    // asserts the response is as expected
                     assert_eq!(resp, Response::SuccessSet());
-                    // send 1 for representing this task has been done
+                    // sends 1 for representing this task has been done
                     while sender.send(1).is_err() {}
                 });
             }
 
-            // wait for all tasks
+            // waits for all tasks
             for _ in 0..NTASK {
                 assert_eq!(receiver.recv().unwrap(), 1);
             }
-            // wait for the server thread
+            // waits for the server thread
             server.join().unwrap();
         },
         BatchSize::PerIteration,
@@ -161,18 +161,18 @@ where
     let keys: Vec<String> = (0..NTASK).map(|n| format!("{:0>8}", n)).collect();
     b.iter_batched(
         || {
-            // init the temp dir and path to store,
+            // inits the temp dir and path to store,
             // where the temp_dir needs to be passed to the routine function
             let temp_dir = TempDir::new().expect("unable to create temporary working directory");
             let path = temp_dir.path().join("db.kvs");
 
-            // init the logger, engine and thread_pool for the server
+            // inits the logger, engine and thread_pool for the server
             let logger = NullLoggerBuilder.build().unwrap();
             let engine = E::open(path.clone()).unwrap();
             let thread_pool = T::new(threads).unwrap();
 
-            // init the server with an available address
-            // and get the local addr for the connections from clients later
+            // inits the server with an available address
+            // and gets the local addr for the connections from clients later
             let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
             let mut server = KvsServer::new(logger, addr, engine, thread_pool).unwrap();
             let addr = server.local_addr();
@@ -182,10 +182,10 @@ where
             let server = std::thread::spawn(move || {
                 server.run(Some(NTASK * 2)).unwrap();
             });
-            // sleep 1s to make sure the server thread has been ready
+            // sleeps 1s to make sure the server thread has been ready
             std::thread::sleep(std::time::Duration::from_secs(1));
 
-            // set all key-values before the benchmark
+            // sets all key-values before the benchmark
             for key in &keys {
                 let mut client = KvsClient::connect(addr).unwrap();
                 let resp = client
@@ -194,17 +194,17 @@ where
                         value: String::from("value"),
                     })
                     .unwrap();
-                // assert the response as expected
+                // asserts the response as expected
                 assert_eq!(resp, Response::SuccessSet());
             }
 
-            // init the thread_pool for clients
+            // inits the thread_pool for clients
             let clients = T::new(NTASK).unwrap();
-            // pass the temp_dir to hold the temp dir
+            // passes the temp_dir to hold the temp dir
             (server, clients, keys.clone(), addr, temp_dir)
         },
         |(server, clients, keys, addr, _)| {
-            // init the sender and receiver to make sure all tasks have been done
+            // inits the sender and receiver to make sure all tasks have been done
             let (sender, receiver) = channel();
             for key in keys {
                 let sender = sender.clone();
@@ -212,18 +212,18 @@ where
                 clients.spawn(move || {
                     let mut client = KvsClient::connect(addr).unwrap();
                     let resp = client.send(Command::Get { key }).unwrap();
-                    // assert the response is as expected
+                    // asserts the response is as expected
                     assert_eq!(resp, Response::SuccessGet(Some(String::from("value"))));
-                    // send 1 for representing this task has been done
+                    // sends 1 for representing this task has been done
                     while sender.send(1).is_err() {}
                 })
             }
 
-            // wait for all tasks
+            // waits for all tasks
             for _ in 0..NTASK {
                 assert_eq!(receiver.recv().unwrap(), 1);
             }
-            // wait for the server thread
+            // waits for the server thread
             server.join().unwrap();
         },
         BatchSize::PerIteration,

@@ -6,6 +6,7 @@ use std::{
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
 };
 
+/// A type that abstracts the server of kvs.
 pub struct KvsServer<E: KvsEngine, T: ThreadPool> {
     logger: Logger,
     listener: TcpListener,
@@ -14,6 +15,7 @@ pub struct KvsServer<E: KvsEngine, T: ThreadPool> {
 }
 
 impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
+    /// Creates a server with a logger, a listening address, a store engine and a thread pool
     pub fn new(logger: Logger, addr: SocketAddr, engine: E, thread_pool: T) -> Result<Self> {
         let listener = TcpListener::bind(addr)?;
         Ok(KvsServer {

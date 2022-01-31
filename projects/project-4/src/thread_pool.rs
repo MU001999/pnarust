@@ -8,7 +8,7 @@ pub use shared_queue_thread_pool::SharedQueueThreadPool;
 
 use crate::Result;
 
-/// `ThreadPool` is a simple trait of thread pools,
+/// A simple trait for thread pools,
 /// which only provides methods new and spawn.
 pub trait ThreadPool: Sized {
     /// Creates a new thread pool capable of executing `threads` number of jobs concurrently.

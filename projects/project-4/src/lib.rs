@@ -20,7 +20,7 @@ pub use thread_pool::ThreadPool;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 
-/// `Command` is a type that represents either set ([`Command::Set`]), get ([`Command::Get`]) or rm ([`Command::Rm`]).
+/// A type that represents either set ([`Command::Set`]), get ([`Command::Get`]) or rm ([`Command::Rm`]).
 #[derive(Parser, Clone, Serialize, Deserialize, Debug)]
 pub enum Command {
     /// Contains the key and value
@@ -31,11 +31,11 @@ pub enum Command {
     Rm { key: String },
 }
 
-/// `Response` is a type that represents the possible response, which may be either success ([`Response::SuccessSet`], [`Response::SuccessGet`], [`Response::SuccessRm`]) or failure ([`Response::Fail`])
+/// A type that represents the possible response, which may be either success ([`Response::SuccessSet`], [`Response::SuccessGet`], [`Response::SuccessRm`]) or failure ([`Response::Fail`])
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum Response {
     SuccessSet(),
-    /// Contains the success value, which is None if the key is not found
+    /// Contains the success value for get-command, which is None if the key is not found
     SuccessGet(Option<String>),
     SuccessRm(),
     /// Contains the error info

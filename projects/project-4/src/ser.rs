@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 
 use crate::{Error, Result};
+
 use serde::{ser, Serialize};
 
 pub struct Serializer {

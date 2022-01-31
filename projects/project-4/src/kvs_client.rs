@@ -1,8 +1,8 @@
 use crate::{Command, Response, Result};
-use std::net::SocketAddr;
+
 use std::{
     io::{Read, Write},
-    net::TcpStream,
+    net::{SocketAddr, TcpStream},
 };
 
 pub struct KvsClient {
@@ -20,7 +20,7 @@ impl KvsClient {
         self.stream
             .write_all(format!("{}#{}", buffer.len(), buffer).as_bytes())?;
 
-        // Error with shutdown, may cause unexpected RST
+        // Error with shutdown, may cause more unexpected RST
         // see https://stackoverflow.com/questions/70796728/why-does-shutdown-write-in-the-client-cause-the-connection-to-be-closed
         // self.stream.shutdown(std::net::Shutdown::Write)?;
 

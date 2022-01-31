@@ -1,5 +1,6 @@
 use super::ThreadPool;
 use crate::Result;
+
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::{
     panic,

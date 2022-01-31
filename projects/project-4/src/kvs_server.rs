@@ -1,9 +1,8 @@
-use crate::thread_pool::*;
-use crate::{Command, Error, KvsEngine, Response, Result};
+use crate::{kvs_engine::KvsEngine, thread_pool::*, Command, Error, Response, Result};
+
 use slog::{info, Logger};
-use std::io::BufRead;
 use std::{
-    io::{BufReader, Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
 };
 

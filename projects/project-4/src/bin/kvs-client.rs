@@ -1,7 +1,7 @@
-use clap::Parser;
 use kvs::{Command, KvsClient, Response, Result};
-use std::net::SocketAddr;
-use std::process::exit;
+
+use clap::Parser;
+use std::{net::SocketAddr, process::exit};
 
 #[derive(Parser)]
 #[clap(name = "kvs-client",

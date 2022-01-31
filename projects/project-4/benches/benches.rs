@@ -1,10 +1,8 @@
+use kvs::{kvs_engine::*, thread_pool::*, Command, KvsClient, KvsServer, Response};
+
 use criterion::{criterion_group, criterion_main, BatchSize, Bencher, BenchmarkId, Criterion};
-use kvs::{thread_pool::*, Command, KvsClient, Response};
-use kvs::{KvStore, KvsEngine, KvsServer, SledKvsEngine};
-use sloggers::null::NullLoggerBuilder;
-use sloggers::Build;
-use std::net::SocketAddr;
-use std::sync::mpsc::channel;
+use sloggers::{null::NullLoggerBuilder, Build};
+use std::{net::SocketAddr, sync::mpsc::channel};
 use tempfile::TempDir;
 
 // one task for one thread to set/get

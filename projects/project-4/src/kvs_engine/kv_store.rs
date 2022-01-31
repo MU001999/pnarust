@@ -1,13 +1,15 @@
 use super::KvsEngine;
 use crate::{Command, Error, Result};
-use std::fs::copy;
-use std::sync::atomic::{AtomicPtr, Ordering};
-use std::sync::{Arc, Mutex};
+
 use std::{
     collections::HashMap,
-    fs::{self, File, OpenOptions},
+    fs::{self, copy, File, OpenOptions},
     io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write},
     path::PathBuf,
+    sync::{
+        atomic::{AtomicPtr, Ordering},
+        Arc, Mutex,
+    },
 };
 use walkdir::WalkDir;
 

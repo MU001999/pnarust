@@ -1,9 +1,11 @@
 #![allow(unused_variables)]
 
-use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
-use serde::Deserialize;
-
 use crate::{Error, Result};
+
+use serde::{
+    de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor},
+    Deserialize,
+};
 
 pub struct Deserializer<'de> {
     input: &'de str,

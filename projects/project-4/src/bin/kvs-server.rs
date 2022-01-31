@@ -1,13 +1,12 @@
-use std::net::SocketAddr;
-use std::path::Path;
-use std::process::exit;
+use kvs::{kvs_engine::*, thread_pool::*, KvsServer, Result};
 
 use clap::{ArgEnum, Parser};
-use kvs::thread_pool::{SharedQueueThreadPool, ThreadPool};
-use kvs::{KvStore, KvsServer, Result, SledKvsEngine};
 use slog::info;
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
-use sloggers::Build;
+use sloggers::{
+    terminal::{Destination, TerminalLoggerBuilder},
+    Build,
+};
+use std::{net::SocketAddr, path::Path, process::exit};
 
 #[derive(Parser)]
 #[clap(name = "kvs-server",

@@ -69,9 +69,9 @@ fn main() -> Result<()> {
     // parses the command-line arguments
     let config = Config::parse();
 
-    // creates a kvs client
+    // creates a kvs client with input address
     let mut client = KvsClient::connect(*config.addr())?;
-    // sends the command to the kvs serevr with input address
+    // sends the command to the kvs serevr
     match client.send(config.into_command())? {
         Response::Fail(msg) => {
             eprintln!("{}", msg);

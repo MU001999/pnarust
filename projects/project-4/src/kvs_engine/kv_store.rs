@@ -31,6 +31,7 @@ struct KvStoreWriter {
     unused: usize,
 }
 
+/// A store engine that allows lock-free readers to read.
 pub struct KvStore {
     reader: Arc<AtomicPtr<Arc<KvStoreReader>>>,
     writer: Arc<Mutex<KvStoreWriter>>,

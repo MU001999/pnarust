@@ -14,6 +14,7 @@ enum Message {
     Exit,
 }
 
+/// A thread pool that uses the `crossbeam_channel`.
 pub struct SharedQueueThreadPool {
     handles: Vec<JoinHandle<()>>,
     channel: (Sender<Message>, Receiver<Message>),

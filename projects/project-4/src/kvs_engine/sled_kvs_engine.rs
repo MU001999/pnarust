@@ -3,6 +3,7 @@ use crate::{Error, Result};
 
 use std::path::PathBuf;
 
+/// A store that just wraps the sled.
 #[derive(Clone)]
 pub struct SledKvsEngine {
     db: sled::Db,

@@ -3,6 +3,7 @@ use kvs::{Command, KvsClient, Response, Result};
 use clap::Parser;
 use std::{net::SocketAddr, process::exit};
 
+// `Config` is the type that represents the command-line arguments
 #[derive(Parser)]
 #[clap(name = "kvs-client",
     version = env!("CARGO_PKG_VERSION"),
@@ -41,6 +42,7 @@ pub enum Config {
 }
 
 impl Config {
+    // gets the corresponding command from the Config
     fn into_command(self) -> Command {
         match self {
             Config::Set { key, value, .. } => Command::Set { key, value },
@@ -49,6 +51,7 @@ impl Config {
         }
     }
 
+    // gets the server address from the Config
     fn addr(&self) -> &SocketAddr {
         match self {
             Config::Set {
@@ -63,9 +66,12 @@ impl Config {
 }
 
 fn main() -> Result<()> {
+    // parses the command-line arguments
     let config = Config::parse();
 
+    // creates a kvs client
     let mut client = KvsClient::connect(*config.addr())?;
+    // sends the command to the kvs serevr with input address
     match client.send(config.into_command())? {
         Response::Fail(msg) => {
             eprintln!("{}", msg);

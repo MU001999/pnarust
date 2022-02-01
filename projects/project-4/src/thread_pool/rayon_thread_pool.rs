@@ -1,6 +1,7 @@
 use super::ThreadPool;
 use crate::Result;
 
+/// A thread pool that just wraps the `rayon::ThreadPool`.
 pub struct RayonThreadPool {
     pool: rayon::ThreadPool,
 }

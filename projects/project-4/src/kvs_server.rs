@@ -6,7 +6,7 @@ use std::{
     net::{Shutdown, SocketAddr, TcpListener, TcpStream},
 };
 
-/// A type that abstracts the server of kvs.
+/// A type that abstracts the kvs server.
 pub struct KvsServer<E: KvsEngine, T: ThreadPool> {
     logger: Logger,
     listener: TcpListener,
@@ -15,7 +15,7 @@ pub struct KvsServer<E: KvsEngine, T: ThreadPool> {
 }
 
 impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
-    /// Creates a server with a logger, a listening address, a store engine and a thread pool
+    /// Creates a server with a logger, a listening address, a store engine and a thread pool.
     pub fn new(logger: Logger, addr: SocketAddr, engine: E, thread_pool: T) -> Result<Self> {
         let listener = TcpListener::bind(addr)?;
         Ok(KvsServer {
@@ -26,8 +26,12 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
         })
     }
 
-    /// Run the server with given number of tasks,
-    /// run without existing if tasks is none.
+    /// Starts receiving requests and replying responses.
+    ///
+    /// Quits after processing `N` tasks with `Some(N)` as `tasks`,
+    /// or keeps running if `tasks` is `None`.
+    ///
+    /// NOTE: the tasks is designed for benchmarks
     pub fn run(&mut self, tasks: Option<usize>) -> Result<()> {
         let mut tasks_cnt = 0;
         for stream in self.listener.incoming() {
@@ -57,11 +61,13 @@ impl<E: KvsEngine, T: ThreadPool> KvsServer<E, T> {
         Ok(())
     }
 
+    // Gets the local address of the server
     pub fn local_addr(&self) -> SocketAddr {
         self.listener.local_addr().unwrap()
     }
 }
 
+// reads one command from the stream
 fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Command> {
     let mut reader = BufReader::new(stream);
 
@@ -82,6 +88,7 @@ fn read_command(logger: &Logger, stream: &TcpStream) -> Result<Command> {
     Ok(command)
 }
 
+// processes a command in the given store engine and returns the response string
 fn process_command(engine: impl KvsEngine, command: Command) -> Result<String> {
     Ok(match command {
         Command::Set { key, value } => {
@@ -102,6 +109,7 @@ fn process_command(engine: impl KvsEngine, command: Command) -> Result<String> {
     })
 }
 
+// responds to the stream with the given response string
 fn respond(logger: &Logger, stream: &mut TcpStream, response: String) -> Result<()> {
     stream.write_all(response.as_bytes())?;
     stream.shutdown(Shutdown::Write)?;

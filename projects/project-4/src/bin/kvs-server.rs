@@ -8,6 +8,7 @@ use sloggers::{
 };
 use std::{net::SocketAddr, path::Path, process::exit};
 
+// `Config` is the type that represents the command-line arguments
 #[derive(Parser)]
 #[clap(name = "kvs-server",
     version = env!("CARGO_PKG_VERSION"),
@@ -25,6 +26,7 @@ struct Config {
     engine: Option<EngineKind>,
 }
 
+// `EngineKind` is for the argument <ENGINE-NAME>
 #[derive(ArgEnum, Clone, PartialEq, Eq)]
 enum EngineKind {
     Kvs,
@@ -32,6 +34,7 @@ enum EngineKind {
 }
 
 impl EngineKind {
+    // translates the EngineKind to the corresponding str
     fn as_str(&self) -> &str {
         match self {
             EngineKind::Kvs => "kvs",
@@ -41,16 +44,19 @@ impl EngineKind {
 }
 
 fn main() -> Result<()> {
+    // builds the logger which logs to stderr
     let mut builder = TerminalLoggerBuilder::new();
     builder.destination(Destination::Stderr);
     let logger = builder.build()?;
 
+    // parses the command-line arguments and checks the engine
     let Config { addr, engine } = Config::parse();
     let engine = check_engine(engine);
 
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
     info!(logger, "IP-PORT: {}, ENGINE: {}", addr, engine.as_str());
 
+    // creates the thread_pool, engine and server and then runs the server
     let thread_pool = SharedQueueThreadPool::new(num_cpus::get()).unwrap();
     match engine {
         EngineKind::Kvs => {
@@ -66,7 +72,9 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+// checks the input engine with selected engine if there has been a selected engine
 fn check_engine(engine: Option<EngineKind>) -> EngineKind {
+    // gets the existed engine
     let exist_engine = if Path::new("db.kvs").exists() {
         Some(EngineKind::Kvs)
     } else if Path::new("db.sled").exists() {
@@ -75,9 +83,11 @@ fn check_engine(engine: Option<EngineKind>) -> EngineKind {
         None
     };
 
+    // checks and returns the final valid engine
     match (engine, exist_engine) {
         (None, None) => EngineKind::Kvs,
         (Some(en1), Some(en2)) if en1 == en2 => en1,
+        // prints to stderr and exits if the input engine is different from the selected engine
         (Some(_), Some(_)) => {
             eprintln!("data was previously persisted with a different engine than selected");
             exit(1);

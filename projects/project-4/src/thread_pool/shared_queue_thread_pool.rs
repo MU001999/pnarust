@@ -27,6 +27,7 @@ impl ThreadPool for SharedQueueThreadPool {
         for _ in 0..threads {
             let recv = channel.1.clone();
             handles.push(thread::spawn(move || {
+                // loops and receives the Message in each thread
                 loop {
                     // reuse the panicked thread, because recreating threads requires communication to tell the main thread and maybe slower than reuse
                     let exit_now = panic::catch_unwind(|| {
@@ -53,6 +54,7 @@ impl ThreadPool for SharedQueueThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
+        // sends the message to the channel
         self.channel.0.send(Message::Run(Box::new(job))).unwrap();
     }
 }

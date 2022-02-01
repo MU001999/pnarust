@@ -16,25 +16,35 @@ use walkdir::WalkDir;
 const SINGLE_FILE_SIZE: u64 = 1024 * 1024;
 const UNUSED_LIMIT: usize = 1024;
 
+// the lock-free reader that only contains the index map
 struct KvStoreReader(HashMap<String, (u64, u64)>);
 
 impl KvStoreReader {
+    // gets a raw pointer of Arc<KvStoreReader> from the given map
     fn raw_arc(index: HashMap<String, (u64, u64)>) -> *mut Arc<KvStoreReader> {
         Box::into_raw(Box::new(Arc::new(KvStoreReader(index))))
     }
 }
 
 struct KvStoreWriter {
+    // base_file is current base file number after the last compaction
     base_file: u64,
+    // active_file is the file number that new logs will be written in
     active_file: u64,
+    // active_writer is the writer for active file
     active_writer: BufWriter<File>,
+    // unused represents current unused logs
     unused: usize,
 }
 
 /// A store engine that allows lock-free readers to read.
 pub struct KvStore {
+    // readers are lock-free since the atomic ptr points to the index map
+    // will be changed atomically by the writer
     reader: Arc<AtomicPtr<Arc<KvStoreReader>>>,
+    // only one writer can write logs at one time
     writer: Arc<Mutex<KvStoreWriter>>,
+    // the path to the directory of the store, whose shared by readers and writers
     path: PathBuf,
 }
 
@@ -67,6 +77,7 @@ impl KvStore {
         let (active_file, base_file) = if nfile == 0 {
             (0, 0)
         } else {
+            // finds the base file number
             let mut base = 0;
             base = loop {
                 if path_at(base).is_file() {
@@ -131,14 +142,17 @@ impl KvStore {
         })
     }
 
+    // clones current map for readers
     fn get_reader(&self) -> Arc<KvStoreReader> {
         unsafe { Arc::clone(&(*self.reader.load(Ordering::Relaxed))) }
     }
 
+    // swaps the pointer with a new pointer points to the given index max atomically
     fn swap_index(&self, index: HashMap<String, (u64, u64)>) {
         let old = self
             .reader
             .swap(KvStoreReader::raw_arc(index), Ordering::Relaxed);
+        // drop the old index map after swaping
         unsafe {
             drop(Box::from_raw(old));
         }
@@ -192,7 +206,7 @@ impl KvStore {
             }
         }
 
-        // update fields in writer
+        // update fields in the writer
         writer.base_file = target_file;
         writer.active_file = target_file;
         writer.active_writer = BufWriter::new(
@@ -208,7 +222,7 @@ impl KvStore {
 
     fn try_compact(&self, last_pos: u64, writer: &mut KvStoreWriter) -> Result<()> {
         if last_pos > SINGLE_FILE_SIZE {
-            // create new file if the active file is large
+            // create new file if the active file is larger than SINGLE_FILE_SIZE
             writer.active_file += 1;
             writer.active_writer = BufWriter::new(
                 OpenOptions::new()
@@ -217,6 +231,7 @@ impl KvStore {
                     .open(self.active_path(writer))?,
             );
 
+            // compacts logs if unused logs are more than UNUSED_LIMIT
             if writer.unused > UNUSED_LIMIT {
                 self.compact(writer)?;
             }
@@ -224,12 +239,14 @@ impl KvStore {
         Ok(())
     }
 
+    // reads the command from the given path and offset
     fn read_command_from(path: PathBuf, pos: u64) -> Result<Command> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);
         KvStore::read_command_from_reader(&mut reader, pos)
     }
 
+    // reads the command from the given reader and offset
     fn read_command_from_reader(reader: &mut BufReader<File>, pos: u64) -> Result<Command> {
         reader.seek(SeekFrom::Start(pos))?;
 
@@ -240,6 +257,7 @@ impl KvStore {
         Ok(serde_json::from_slice(&command)?)
     }
 
+    // writes the given command to the given reader and returns the written pos
     fn write_command_to_writer(writer: &mut BufWriter<File>, command: &Command) -> Result<u64> {
         writer.seek(SeekFrom::End(0))?;
         let pos = writer.stream_position()?;
@@ -266,7 +284,7 @@ impl KvsEngine for KvStore {
         KvStore::open(path)
     }
 
-    /// Set the given value with the given key.
+    /// Sets the given value with the given key.
     ///
     /// # Examples
     ///
@@ -303,7 +321,7 @@ impl KvsEngine for KvStore {
         self.try_compact(pos, &mut writer)
     }
 
-    /// Get the corresponding value of the given key,
+    /// Gets the corresponding value of the given key,
     /// return None if the key not exists.
     ///
     /// # Examples
@@ -333,7 +351,7 @@ impl KvsEngine for KvStore {
         }
     }
 
-    /// Remove the given key and the corresponding value.
+    /// Removes the given key and the corresponding value.
     ///
     /// # Examples
     ///

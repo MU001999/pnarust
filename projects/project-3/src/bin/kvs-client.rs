@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use std::process::exit;
 use structopt::StructOpt;
 
+// `Config` is the type that represents the command-line arguments
 #[derive(StructOpt)]
 #[structopt(name = "kvs-client",
     version = env!("CARGO_PKG_VERSION"),
@@ -41,6 +42,7 @@ pub enum Config {
 }
 
 impl Config {
+    // gets the corresponding command from the Config
     fn into_command(self) -> Command {
         match self {
             Config::Set { key, value, .. } => Command::Set { key, value },
@@ -49,6 +51,7 @@ impl Config {
         }
     }
 
+    // gets the server address from the Config
     fn addr(&self) -> &str {
         match self {
             Config::Set {
@@ -63,13 +66,16 @@ impl Config {
 }
 
 fn main() -> Result<()> {
+    // parses the command-line arguments
     let config = Config::from_args();
     let addr: SocketAddr = config
         .addr()
         .parse()
         .expect("IP-PORT does not parse as an address");
 
+    // creates a kvs client with input address
     let mut client = KvsClient::connect(addr)?;
+    // sends the command to the kvs serevr
     match client.send(config.into_command())? {
         Response::Fail(msg) => {
             eprintln!("{}", msg);

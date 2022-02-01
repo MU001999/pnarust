@@ -2,6 +2,7 @@ use super::KvsEngine;
 use crate::{Error, Result};
 use std::path::PathBuf;
 
+/// A store that just wraps the sled.
 pub struct SledKvsEngine {
     db: sled::Db,
 }

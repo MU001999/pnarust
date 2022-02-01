@@ -1,5 +1,7 @@
+/// A type that represents either Success or Failure in kvs.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// A type that represents errors in kvs.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("IOError: {0:?}")]

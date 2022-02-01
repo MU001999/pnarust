@@ -8,6 +8,7 @@ use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::Build;
 use structopt::StructOpt;
 
+// `Config` is the type that represents the command-line arguments
 #[derive(StructOpt)]
 #[structopt(name = "kvs-server",
     version = env!("CARGO_PKG_VERSION"),
@@ -25,6 +26,7 @@ struct Config {
     engine: Option<String>,
 }
 
+// `EngineKind` is for the argument <ENGINE-NAME>
 #[derive(PartialEq, Eq)]
 enum EngineKind {
     Kvs,
@@ -32,6 +34,7 @@ enum EngineKind {
 }
 
 impl EngineKind {
+    // translates the EngineKind to the corresponding str
     fn as_str(&self) -> &str {
         match self {
             EngineKind::Kvs => "kvs",
@@ -41,10 +44,12 @@ impl EngineKind {
 }
 
 fn main() -> Result<()> {
+    // builds the logger which logs to stderr
     let mut builder = TerminalLoggerBuilder::new();
     builder.destination(Destination::Stderr);
     let logger = builder.build()?;
 
+    // parses the command-line arguments
     let Config { addr, engine } = Config::from_args();
 
     let addr: SocketAddr = addr.parse().expect("IP-PORT does not parse as an address");
@@ -78,6 +83,7 @@ fn main() -> Result<()> {
     info!(logger, "kvs-server version: {}", env!("CARGO_PKG_VERSION"));
     info!(logger, "IP-PORT: {}, ENGINE: {}", addr, engine.as_str());
 
+    // creates the engine and server and then runs the server
     match engine {
         EngineKind::Kvs => {
             let mut engine = KvStore::open("db.".to_owned() + engine.as_str())?;

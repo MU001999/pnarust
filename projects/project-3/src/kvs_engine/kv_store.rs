@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 
 const SINGLE_FILE_SIZE: u64 = 1024 * 1024;
 
+/// A store engine that works for kvs.
 pub struct KvStore {
     index: HashMap<String, (u64, u64)>,
     path: PathBuf,
